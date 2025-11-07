@@ -1,4 +1,3 @@
-````markdown
 # 💰 虛擬貨幣模擬交易平台 (Crypto Trading Simulator)
 
 ## 🚀 專案簡介
@@ -13,17 +12,30 @@
 
 請確保您的系統已安裝 **Docker Desktop** 和 **Git**。
 
-### 步驟 1: 啟動後端服務 (Go)
+### 方式 1: 啟動所有服務
+在專案根目錄下，執行以下命令。這將建置並啟動專案中所有容器(包含前後端、資料庫)。
+
+```bash
+docker compose up --build
+```
+
+若您想背景執行，可以在專案根目錄下，執行以下命令。
+```bash
+docker compose up --build -d
+```
+---
+### 方式 2: 分別啟動不同容器
+#### 步驟 1: 啟動後端服務 (Go)
 
 在專案根目錄下，執行以下命令。這將建置並啟動 Go 後端容器，並掛載程式碼 Volume 以便您修改。
 
 ```bash
 docker compose up --build -d backend
-````
+```
 
-> **💡 說明:** 這裡的 `backend` 服務使用 `Dockerfile.backend` 中的 `builder` 階段映像檔，內含 Go 編譯器，為後續的自動重啟或開發命令做準備。
+> **💡 說明:** 這裡的 `backend` 服務使用 `Dockerfile.backend` 中的 `builder` 階段映像檔。
 
-### 步驟 2: 啟動前端開發伺服器 (Vite)
+#### 步驟 2: 啟動前端開發伺服器 (Vite)
 
 為了最佳的熱重載性能 (HMR)，請在主機上運行 Vite 開發伺服器。
 
