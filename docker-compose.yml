@@ -1,0 +1,36 @@
+
+services:
+  # -------------------- 後端服務 (Go 開發模式) --------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      target: builder
+      # 在開發模式下，我們通常會覆蓋 CMD，或使用不同的 entrypoint/command
+      # 但這裡我們可以利用 go run 和 volumes
+    # 將容器的 8080 埠號映射到主機的 8080 埠號
+    ports:
+      - "8080:8080"
+    # 關鍵：將後端程式碼掛載到容器，容器內可以直接使用 go run
+    volumes:
+      - ./backend:/app/backend
+    # 覆蓋預設的 CMD，使用 go run 來啟動應用程式
+    # 這會讓 Go 在每次啟動時重新編譯並運行
+    command: ["go", "run", "main.go"] # 請替換為您的主 Go 檔案路徑
+    # 或者使用一個開發用的 Watcher 工具 (例如 Air)，如果您需要自動偵測檔案變更
+    # command: ["air", "-c", ".air.toml"] # 需要在 Dockerfile.backend 中安裝 Air
+
+  # -------------------- 前端開發服務 (不變) --------------------
+  frontend_dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      VITE_APP_API_URL: http://backend:3000
+    depends_on:
+      - backend
