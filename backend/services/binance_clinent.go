@@ -10,7 +10,7 @@ import (
 )
 
 // 這是幣安 (Binance) 提供的 BTC/USDT 交易對的即時價格 WebSocket URL
-const binanceURL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+const binanceURL = "wss://stream.binance.com:9443/stream?streams=btcusdt@trade/ethusdt@trade/solusdt@trade"
 
 // ConnectToBinance 會開始連接幣安並將數據餵給 Hub
 // 它應該在一個獨立的 goroutine 中執行
