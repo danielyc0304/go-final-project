@@ -1,0 +1,49 @@
+# Dockerfile.backend
+
+# ============== Stage 1: Build the Go application ==============
+# 使用一個較大的 Go 映像檔來進行編譯
+FROM golang:1.25-alpine AS builder
+
+# 設定工作目錄
+WORKDIR /app/backend
+
+# 將後端程式碼從主機複製到容器
+COPY backend/go.mod .
+COPY backend/go.sum .
+
+ENV GOPROXY=https://proxy.golang.org,direct
+
+# 如果您有 Go 模組 (go.mod/go.sum)
+RUN go mod download
+RUN go mod tidy
+
+COPY backend/ .
+
+# 確保靜態連結，編譯一個單一執行檔
+# CGO_ENABLED=0 確保不依賴任何外部 C 函式庫，這對於 alpine 基礎映像非常重要
+# -o /usr/local/bin/app 定義編譯出來的執行檔名稱和路徑
+RUN CGO_ENABLED=0 go build -ldflags='-s -w' -o /usr/local/bin/app ./main.go
+# (請將 ./cmd/main.go 替換成您的 Go 應用程式進入點檔案路徑)
+
+
+# ============== Stage 2: Create the minimal runtime image ==============
+# 選擇一個極小的基礎映像，例如 alpine 或 scratch
+FROM alpine:latest
+# 或
+# FROM scratch # 如果您想追求最小化，但不方便除錯
+
+# 安裝任何必要的運行時依賴（Go 執行檔通常不需要）
+# 如果您的 Go 應用需要讀取 SSL 憑證或 DNS 解析，則 alpine 包含這些。
+# 如果使用 scratch，可能需要手動複製 /etc/ssl/certs/ca-certificates.crt
+
+# 設定工作目錄
+WORKDIR /root/
+
+# 從 'builder' 階段複製編譯好的執行檔
+COPY --from=builder /usr/local/bin/app .
+
+# 暴露應用程式監聽的埠號
+EXPOSE 8080
+
+# 定義啟動指令
+CMD ["./app"]
