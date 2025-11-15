@@ -15,7 +15,7 @@ function genCandles(seedPrice = 105000, n = 240) {
     const time = t0 + i * 60;
     const drift = (Math.random() - 0.5) * (p * 0.0016);
     const open = p;
-    const close = open + drift;
+    const close = open + drift; 
     const high = Math.max(open, close) + Math.random() * (p * 0.0008);
     const low = Math.min(open, close) - Math.random() * (p * 0.0008);
     out.push({
