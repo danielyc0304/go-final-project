@@ -1,0 +1,14 @@
+FROM golang:latest
+
+WORKDIR /app
+
+RUN go install github.com/beego/bee/v2@latest
+ENV PATH="/go/bin:${PATH}"
+
+COPY . .
+RUN go mod tidy
+RUN go mod download
+
+EXPOSE 8080
+
+CMD ["sh", "-c", "bee generate routers && bee run --downdoc=true --gendoc=true"]
