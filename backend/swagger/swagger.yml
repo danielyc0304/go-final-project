@@ -12,148 +12,77 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 basePath: /v1
 paths:
-  /object/:
-    get:
-      tags:
-      - object
-      description: |-
-        get all objects
-        <br>
-      operationId: ObjectController.GetAll
-      responses:
-        "200":
-          description: ""
-          schema:
-            $ref: '#/definitions/models.Object'
-        "403":
-          description: :objectId is empty
-    post:
-      tags:
-      - object
-      description: |-
-        create object
-        <br>
-      operationId: ObjectController.Create
-      parameters:
-      - in: body
-        name: body
-        description: The object content
-        required: true
-        schema:
-          $ref: '#/definitions/models.Object'
-      responses:
-        "200":
-          description: '{string} models.Object.Id'
-        "403":
-          description: body is empty
-  /object/{objectId}:
-    get:
-      tags:
-      - object
-      description: |-
-        find object by objectid
-        <br>
-      operationId: ObjectController.Get
-      parameters:
-      - in: path
-        name: objectId
-        description: the objectid you want to get
-        required: true
-        type: string
-      responses:
-        "200":
-          description: ""
-          schema:
-            $ref: '#/definitions/models.Object'
-        "403":
-          description: :objectId is empty
-    put:
-      tags:
-      - object
-      description: |-
-        update the object
-        <br>
-      operationId: ObjectController.Update
-      parameters:
-      - in: path
-        name: objectId
-        description: The objectid you want to update
-        required: true
-        type: string
-      - in: body
-        name: body
-        description: The body
-        required: true
-        schema:
-          $ref: '#/definitions/models.Object'
-      responses:
-        "200":
-          description: ""
-          schema:
-            $ref: '#/definitions/models.Object'
-        "403":
-          description: :objectId is empty
-    delete:
-      tags:
-      - object
-      description: |-
-        delete the object
-        <br>
-      operationId: ObjectController.Delete
-      parameters:
-      - in: path
-        name: objectId
-        description: The objectId you want to delete
-        required: true
-        type: string
-      responses:
-        "200":
-          description: '{string} delete success!'
-        "403":
-          description: objectId is empty
   /user/:
     get:
       tags:
       - user
       description: |-
-        get all Users
+        get User
         <br>
-      operationId: UserController.GetAll
+      operationId: UserController.Get All
+      parameters:
+      - in: query
+        name: query
+        description: Filter. e.g. col1:v1,col2:v2 ...
+        type: string
+      - in: query
+        name: fields
+        description: Fields returned. e.g. col1,col2 ...
+        type: string
+      - in: query
+        name: sortby
+        description: Sorted-by fields. e.g. col1,col2 ...
+        type: string
+      - in: query
+        name: order
+        description: Order corresponding to each sortby field, if single value, apply
+          to all sortby fields. e.g. desc,asc ...
+        type: string
+      - in: query
+        name: limit
+        description: Limit the size of result set. Must be an integer
+        type: string
+      - in: query
+        name: offset
+        description: Start position of result set. Must be an integer
+        type: string
       responses:
         "200":
           description: ""
           schema:
             $ref: '#/definitions/models.User'
+        "403":
+          description: ""
     post:
       tags:
       - user
       description: |-
-        create users
+        create User
         <br>
-      operationId: UserController.CreateUser
+      operationId: UserController.Post
       parameters:
       - in: body
         name: body
-        description: body for user content
+        description: body for User content
         required: true
         schema:
           $ref: '#/definitions/models.User'
       responses:
-        "200":
-          description: '{int} models.User.Id'
+        "201":
+          description: '{int} models.User'
         "403":
           description: body is empty
-  /user/{uid}:
+  /user/{id}:
     get:
       tags:
       - user
       description: |-
-        get user by uid
+        get User by id
         <br>
-      operationId: UserController.Get
+      operationId: UserController.Get One
       parameters:
       - in: path
-        name: uid
+        name: id
         description: The key for staticblock
         required: true
         type: string
@@ -163,23 +92,23 @@ paths:
           schema:
             $ref: '#/definitions/models.User'
         "403":
-          description: :uid is empty
+          description: :id is empty
     put:
       tags:
       - user
       description: |-
-        update the user
+        update the User
         <br>
-      operationId: UserController.Update
+      operationId: UserController.Put
       parameters:
       - in: path
-        name: uid
-        description: The uid you want to update
+        name: id
+        description: The id you want to update
         required: true
         type: string
       - in: body
         name: body
-        description: body for user content
+        description: body for User content
         required: true
         schema:
           $ref: '#/definitions/models.User'
@@ -189,101 +118,43 @@ paths:
           schema:
             $ref: '#/definitions/models.User'
         "403":
-          description: :uid is not int
+          description: :id is not int
     delete:
       tags:
       - user
       description: |-
-        delete the user
+        delete the User
         <br>
       operationId: UserController.Delete
       parameters:
       - in: path
-        name: uid
-        description: The uid you want to delete
+        name: id
+        description: The id you want to delete
         required: true
         type: string
       responses:
         "200":
           description: '{string} delete success!'
         "403":
-          description: uid is empty
-  /user/login:
-    get:
-      tags:
-      - user
-      description: |-
-        Logs user into the system
-        <br>
-      operationId: UserController.Login
-      parameters:
-      - in: query
-        name: username
-        description: The username for login
-        required: true
-        type: string
-      - in: query
-        name: password
-        description: The password for login
-        required: true
-        type: string
-      responses:
-        "200":
-          description: '{string} login success'
-        "403":
-          description: user not exist
-  /user/logout:
-    get:
-      tags:
-      - user
-      description: |-
-        Logs out current logged in user session
-        <br>
-      operationId: UserController.logout
-      responses:
-        "200":
-          description: '{string} logout success'
+          description: id is empty
 definitions:
-  models.Object:
-    title: Object
-    type: object
-    properties:
-      ObjectId:
-        type: string
-      PlayerName:
-        type: string
-      Score:
-        type: integer
-        format: int64
-  models.Profile:
-    title: Profile
-    type: object
-    properties:
-      Address:
-        type: string
-      Age:
-        type: integer
-        format: int64
-      Email:
-        type: string
-      Gender:
-        type: string
   models.User:
     title: User
     type: object
     properties:
+      CreatedAt:
+        type: string
+        format: datetime
+      Email:
+        type: string
       Id:
+        type: integer
+        format: int64
+      Name:
         type: string
       Password:
         type: string
-      Profile:
-        $ref: '#/definitions/models.Profile'
-      Username:
-        type: string
 tags:
-- name: object
-  description: |
-    Operations about object
 - name: user
   description: |
-    Operations about Users
+    UserController operations for User

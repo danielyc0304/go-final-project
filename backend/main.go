@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "backend/db"
 	"backend/hub"
 	_ "backend/routers"
 	"backend/services"
