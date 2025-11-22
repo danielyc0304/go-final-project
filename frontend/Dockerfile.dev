@@ -1,20 +1,11 @@
-# frontend/Dockerfile.dev
+FROM node:latest
 
-# 選擇一個適合開發的 Node.js 映像檔
-FROM node:20-alpine
-
-# 設定工作目錄
 WORKDIR /app
-
-# 複製 package.json 和 lock 檔案
 COPY package*.json ./
-
-# 安裝依賴
 RUN npm install
 
-# 暴露 Vite 開發伺服器預設使用的埠號
+COPY . .
+
 EXPOSE 5173
 
-# 啟動 Vite 開發伺服器
-# 必須使用 --host 0.0.0.0 讓伺服器監聽所有網路介面，Docker 外部才能存取
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev", "--", "--host"]
