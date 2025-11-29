@@ -231,6 +231,13 @@
                 }
             }
         },
+        "/market/klines": {
+            "get": {
+                "tags": [
+                    "market"
+                ]
+            }
+        },
         "/user/": {
             "get": {
                 "tags": [

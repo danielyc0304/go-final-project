@@ -166,6 +166,10 @@ paths:
           description: missing or invalid fields
         "500":
           description: internal error
+  /market/klines:
+    get:
+      tags:
+      - market
   /user/:
     get:
       tags:
