@@ -38,23 +38,26 @@ const SYMBOLS = [
   { symbol: "DOGEUSDT", name: "Dogecoin" },
 ];
 
-/* ===== K 線元件  ===== */
+/* ===== K 線元件 (修復資料載入時序問題) ===== */
 function CandlestickChart({ data }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
-  
-  // 用來記錄上一次的資料長度，判斷是「歷史載入」還是「即時更新」
   const prevDataLengthRef = useRef(0);
+  
+  // [新增] 使用 ref 隨時記錄最新的 data，解決閉包舊資料問題
+  const latestDataRef = useRef(data);
+  useEffect(() => {
+    latestDataRef.current = data;
+  }, [data]);
 
-  // 1. 初始化圖表 (只執行一次)
+  // 1. 初始化圖表
   useEffect(() => {
     let chart;
     let series;
     let ro;
 
     (async () => {
-      // 匯入 v5 的必要模組
       const { createChart, CandlestickSeries } = await import("lightweight-charts");
       const el = containerRef.current;
       if (!el) return;
@@ -69,17 +72,21 @@ function CandlestickChart({ data }) {
         crosshair: { mode: 1 },
       });
 
-      // 建立 K 線系列
       series = chart.addSeries(CandlestickSeries, {
         upColor: "#26a69a", downColor: "#ef5350",
         wickUpColor: "#26a69a", wickDownColor: "#ef5350",
         borderVisible: false,
       });
 
+      // [關鍵修正] 初始化完成時，直接讀取 ref 裡的「最新資料」，而不是閉包裡的舊 data
+      if (latestDataRef.current && latestDataRef.current.length > 0) {
+        series.setData(latestDataRef.current);
+        prevDataLengthRef.current = latestDataRef.current.length;
+      }
+
       chartRef.current = chart;
       seriesRef.current = series;
 
-      // 響應式調整大小
       ro = new ResizeObserver(() => {
         if (containerRef.current) {
           chart.applyOptions({ width: containerRef.current.clientWidth });
@@ -92,24 +99,27 @@ function CandlestickChart({ data }) {
       if (ro) ro.disconnect();
       if (chart) chart.remove();
     };
-  }, []);
+  }, []); // 只執行一次
 
-  // 2. 數據更新邏輯 (關鍵修改)
+  // 2. 數據更新邏輯
   useEffect(() => {
-    if (!seriesRef.current || data.length === 0) return;
+    // 如果圖表還沒建立好，就先略過，反正初始化那邊(上面)會去抓最新的
+    if (!seriesRef.current) return;
+    
+    // 如果資料是空的，也沒必要畫
+    if (data.length === 0) return;
 
     const prevLength = prevDataLengthRef.current;
     const currLength = data.length;
     const lastCandle = data[currLength - 1];
-    
+
+    // 判斷是歷史載入(大量) 還是 即時更新(單筆)
     if (prevLength === 0 || Math.abs(currLength - prevLength) > 1) {
       seriesRef.current.setData(data);
-    } 
-    else {
+    } else {
       seriesRef.current.update(lastCandle);
     }
 
-    // 更新長度紀錄
     prevDataLengthRef.current = currLength;
   }, [data]);
 
