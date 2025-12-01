@@ -61,6 +61,15 @@ func init() {
             Filters: nil,
             Params: nil})
 
+    beego.GlobalControllerRouter["backend/controllers:MarketController"] = append(beego.GlobalControllerRouter["backend/controllers:MarketController"],
+        beego.ControllerComments{
+            Method: "GetKLines",
+            Router: `/klines`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
     beego.GlobalControllerRouter["backend/controllers:UserController"] = append(beego.GlobalControllerRouter["backend/controllers:UserController"],
         beego.ControllerComments{
             Method: "Post",
