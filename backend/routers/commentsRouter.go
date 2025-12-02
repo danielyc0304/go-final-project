@@ -70,6 +70,51 @@ func init() {
             Filters: nil,
             Params: nil})
 
+    beego.GlobalControllerRouter["backend/controllers:TradingController"] = append(beego.GlobalControllerRouter["backend/controllers:TradingController"],
+        beego.ControllerComments{
+            Method: "PlaceOrder",
+            Router: `/order`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:TradingController"] = append(beego.GlobalControllerRouter["backend/controllers:TradingController"],
+        beego.ControllerComments{
+            Method: "GetOrders",
+            Router: `/orders`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:TradingController"] = append(beego.GlobalControllerRouter["backend/controllers:TradingController"],
+        beego.ControllerComments{
+            Method: "GetPrices",
+            Router: `/prices`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:TradingController"] = append(beego.GlobalControllerRouter["backend/controllers:TradingController"],
+        beego.ControllerComments{
+            Method: "GetTransactions",
+            Router: `/transactions`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:TradingController"] = append(beego.GlobalControllerRouter["backend/controllers:TradingController"],
+        beego.ControllerComments{
+            Method: "GetWallets",
+            Router: `/wallets`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
     beego.GlobalControllerRouter["backend/controllers:UserController"] = append(beego.GlobalControllerRouter["backend/controllers:UserController"],
         beego.ControllerComments{
             Method: "Post",

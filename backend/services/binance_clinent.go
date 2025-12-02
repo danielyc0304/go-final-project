@@ -45,6 +45,9 @@ func ConnectToBinance(h *hub.Hub) {
 			//    我們把訊息餵給 Hub 的 Broadcast channel
 			h.Broadcast <- message
 
+			// 4. 同時更新價格快取，供交易系統使用
+			GlobalPriceCache.UpdatePrice(message)
+
 			// (可選) 如果你打開這個 log，你的終端機會被幣安的數據洗頻
 			// log.Printf("Received from Binance: %s", message)
 		}

@@ -18,6 +18,7 @@ func init() {
 		beego.NSNamespace("/auth", beego.NSInclude(&controllers.AuthController{})),
 		beego.NSNamespace("/user", beego.NSInclude(&controllers.UserController{})),
 		beego.NSNamespace("/market", beego.NSInclude(&controllers.MarketController{})),
+		beego.NSNamespace("/trading", beego.NSInclude(&controllers.TradingController{})),
 	)
 	beego.AddNamespace(ns)
 	beego.Router("/ws", &controllers.WebSocketController{})

@@ -13,6 +13,9 @@ func init() {
 	hub.GlobalHub = hub.NewHub()
 	go hub.GlobalHub.Run()
 	go services.ConnectToBinance(hub.GlobalHub)
+
+	// 啟動限價單撮合服務
+	services.GlobalLimitOrderMatcher.Start()
 }
 
 func main() {

@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"errors"
+	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -57,4 +60,27 @@ func ParseToken(token string) (claims *Claims, err error) {
 	}
 	err = jwt.ErrTokenInvalidClaims
 	return
+}
+
+// ValidateJWT 從 HTTP 請求中驗證 JWT 並返回使用者 ID
+func ValidateJWT(r *http.Request) (int64, error) {
+	// 從 Authorization header 取得 token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return 0, errors.New("missing authorization header")
+	}
+
+	// 移除 "Bearer " 前綴
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		return 0, errors.New("invalid authorization header format")
+	}
+
+	// 解析 token
+	claims, err := ParseToken(tokenString)
+	if err != nil {
+		return 0, err
+	}
+
+	return claims.UserID, nil
 }

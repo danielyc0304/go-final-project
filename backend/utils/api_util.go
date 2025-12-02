@@ -25,3 +25,18 @@ func CreateAPIResponse(ctx *context.Context, status int, data any) {
 		}, false, false)
 	}
 }
+
+// RespondJSON 返回 JSON 回應
+func RespondJSON(ctx *context.Context, status int, data interface{}) {
+	ctx.Output.SetStatus(status)
+	ctx.Output.JSON(data, false, false)
+}
+
+// RespondError 返回錯誤回應
+func RespondError(ctx *context.Context, status int, message string) {
+	ctx.Output.SetStatus(status)
+	ctx.Output.JSON(map[string]interface{}{
+		"success": false,
+		"error":   message,
+	}, false, false)
+}
