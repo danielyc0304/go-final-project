@@ -52,6 +52,7 @@ const Login = ({ changePage, setLogged }) => {
       }
     } catch (error) {
       console.error("Login error:", error);
+      console.log(data);
       alert("登入發生錯誤，請稍後再試");
     }
   };

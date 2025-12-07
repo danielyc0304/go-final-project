@@ -318,7 +318,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!isJwtValid(token)) {
-      setLogged(false)
+      setLogged(false);
     }
   }, []);
 
