@@ -294,7 +294,10 @@ export default function App() {
   }
 
   useEffect(() => {
-    if(cash < 0){
+    let counter = 0;
+    async function checkCashLoop() {
+
+    while(cash < 0 && counter < 20){
       handleCheckCash();
       const wallet = JSON.parse(localStorage.getItem("wallet"));
       // console.log("wallet from localStorage: ", wallet);
@@ -308,7 +311,12 @@ export default function App() {
           console.log("未找到 USDT 錢包");
         }
       }
+      console.log("未找到錢包");
+      counter ++;
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒鐘
     }
+  }
+  checkCashLoop();
   }, [cash]);
 
 
@@ -428,8 +436,8 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    // console.log("token is : " , token);
-    // console.log("checker alt : ", isJwtValid(token))
+    console.log("token is : " , token);
+    console.log("checker alt : ", isJwtValid(token))
 
     if (logged && !isJwtValid(token)) {
       setLogged(false);
