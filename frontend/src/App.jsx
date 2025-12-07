@@ -297,7 +297,7 @@ export default function App() {
     let counter = 0;
     async function checkCashLoop() {
 
-    while(cash < 0 && counter < 20){
+    while(cash < 0 && counter < 1000){
       handleCheckCash();
       const wallet = JSON.parse(localStorage.getItem("wallet"));
       // console.log("wallet from localStorage: ", wallet);
