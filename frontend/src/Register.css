@@ -1,0 +1,176 @@
+/* src/Register.css */
+
+/* 保持與 Welcome.css 一致的變數設定 */
+:root {
+    --primary-bg: linear-gradient(135deg, #0f172a 0%, #000000 100%);
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --accent-color: #06b6d4;
+    --accent-gradient: linear-gradient(to right, #06b6d4, #3b82f6);
+    --text-main: #ffffff;
+    --text-sub: #94a3b8;
+    --input-bg: rgba(0, 0, 0, 0.3);
+    --input-border: rgba(255, 255, 255, 0.1);
+  }
+  
+  .register-container {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--primary-bg);
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    overflow: hidden;
+    color: var(--text-main);
+  }
+  
+  /* 背景光暈 (與 Welcome 相同) */
+  .decorative-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 0;
+  }
+  
+  .glow-top-left {
+    top: -10%;
+    left: 10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(0,0,0,0) 70%);
+  }
+  
+  .glow-bottom-right {
+    bottom: -10%;
+    right: 10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 70%);
+  }
+  
+  /* --- 註冊卡片 --- */
+  .register-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 48px 40px;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 420px;
+    z-index: 1;
+    position: relative;
+  }
+  
+  .register-header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  
+  .register-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(to right, #fff, #cbd5e1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .register-subtitle {
+    color: var(--text-sub);
+    font-size: 14px;
+  }
+  
+  /* --- 表單樣式 --- */
+  .register-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .input-group {
+    position: relative;
+  }
+  
+  /* 輸入框內的圖標 */
+  .input-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-sub);
+    transition: color 0.3s ease;
+  }
+  
+  /* 輸入框本體 */
+  .input-field {
+    width: 100%;
+    padding: 14px 16px 14px 48px; /* 左邊留給圖標 */
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 15px;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+  
+  /* 輸入框互動效果 */
+  .input-field:focus {
+    border-color: var(--accent-color);
+    background: rgba(6, 182, 212, 0.05);
+    box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
+  }
+  
+  .input-field:focus + .input-icon {
+    color: var(--accent-color); /* Focus 時圖標變色 */
+  }
+  
+  /* 輸入框 Placeholder 顏色 */
+  .input-field::placeholder {
+    color: rgba(148, 163, 184, 0.5);
+  }
+  
+  /* --- 按鈕 --- */
+  .btn-submit {
+    margin-top: 12px;
+    padding: 14px;
+    background: var(--accent-gradient);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+  }
+  
+  .btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(6, 182, 212, 0.5);
+  }
+  
+  /* --- 底部連結 --- */
+  .register-footer {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 14px;
+    color: var(--text-sub);
+  }
+  
+  .link-login {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 5px;
+    transition: color 0.2s;
+  }
+  
+  .link-login:hover {
+    color: #38bdf8;
+    text-decoration: underline;
+  }

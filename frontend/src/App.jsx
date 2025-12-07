@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import Welcome from "./Welcome.jsx";
 
 /* ===== 小工具 ===== */
 const fmt = new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 });
@@ -282,7 +283,8 @@ export default function App() {
   const unreal = useMemo(() => positions.reduce((sum, p) => sum + (lastPrice - p.entry) * p.qty * (p.side === "BUY" ? 1 : -1), 0), [positions, lastPrice]);
   const totalVal = useMemo(() => positions.reduce((sum, p) => sum + (p.qty || 0) * lastPrice, 0), [positions, lastPrice]);
 
-  if (!logged) return <LoginPage onLogin={() => setLogged(true)} />;
+  // if (!logged) return <LoginPage onLogin={() => setLogged(true)} />;
+  if (!logged) return <Welcome setLogged = {setLogged}/>;
 
   return (
     <div className="app">
@@ -330,25 +332,25 @@ export default function App() {
 
 /* ===== 子元件 ===== */
 
-function LoginPage({ onLogin }) {
-  const [u, setU] = useState("");
-  const [p, setP] = useState("");
-  return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <h1>Quantis 模擬交易</h1>
-        <p className="sub">系統已連接 Binance 真實行情</p>
-        <label>帳號 (任意)</label>
-        <input value={u} onChange={(e) => setU(e.target.value)} placeholder="輸入帳號" />
-        <label>密碼 (任意)</label>
-        <input type="password" value={p} onChange={(e) => setP(e.target.value)} placeholder="輸入密碼" />
-        <button className="primary" onClick={onLogin} style={{marginTop: 20}}>
-          登入系統
-        </button>
-      </div>
-    </div>
-  );
-}
+// function LoginPage({ onLogin }) {
+//   const [u, setU] = useState("");
+//   const [p, setP] = useState("");
+//   return (
+//     <div className="login-wrap">
+//       <div className="login-card">
+//         <h1>Quantis 模擬交易</h1>
+//         <p className="sub">系統已連接 Binance 真實行情</p>
+//         <label>帳號 (任意)</label>
+//         <input value={u} onChange={(e) => setU(e.target.value)} placeholder="輸入帳號" />
+//         <label>密碼 (任意)</label>
+//         <input type="password" value={p} onChange={(e) => setP(e.target.value)} placeholder="輸入密碼" />
+//         <button className="primary" onClick={onLogin} style={{marginTop: 20}}>
+//           登入系統
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
 
 function OrderBookPanel({ symbol, lastPrice, trend, orderBook }) {
   const chg = (Math.random() - 0.5) * 2.3; // 模擬 24h 漲跌
