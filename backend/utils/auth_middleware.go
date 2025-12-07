@@ -11,9 +11,9 @@ import (
 func AuthMiddleware(ctx *context.Context) {
 	// 不需要驗證的路由（白名單）
 	unprotectedRoutes := []string{
-		"/auth/registration",
-		"/auth/login",
-		"/market/klines",
+		"/v1/auth/registration",
+		"/v1/auth/login",
+		"/v1/market/klines",
 	}
 
 	// 檢查路由是否在白名單中
@@ -24,6 +24,11 @@ func AuthMiddleware(ctx *context.Context) {
 			isUnprotected = true
 			break
 		}
+	}
+
+	// WebSocket 路由不需要驗證
+	if strings.HasPrefix(path, "/ws") {
+		return
 	}
 
 	if isUnprotected {
