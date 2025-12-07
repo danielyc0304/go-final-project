@@ -493,6 +493,13 @@
                 "operationId": "UserController.Get All",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
                         "in": "query",
                         "name": "query",
                         "description": "Filter. e.g. col1:v1,col2:v2 ...",
@@ -536,6 +543,9 @@
                             "$ref": "#/definitions/models.User"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
                     "403": {
                         "description": ""
                     }
@@ -549,6 +559,13 @@
                 "operationId": "UserController.Post",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
                         "in": "body",
                         "name": "body",
                         "description": "body for User content",
@@ -561,6 +578,9 @@
                 "responses": {
                     "201": {
                         "description": "{int} models.User"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
                     },
                     "403": {
                         "description": "body is empty"
@@ -577,6 +597,13 @@
                 "operationId": "UserController.Get One",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
                         "in": "path",
                         "name": "id",
                         "description": "The key for staticblock",
@@ -591,6 +618,9 @@
                             "$ref": "#/definitions/models.User"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
                     "403": {
                         "description": ":id is empty"
                     }
@@ -603,6 +633,13 @@
                 "description": "update the User\n\u003cbr\u003e",
                 "operationId": "UserController.Put",
                 "parameters": [
+                    {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
                     {
                         "in": "path",
                         "name": "id",
@@ -627,6 +664,9 @@
                             "$ref": "#/definitions/models.User"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
                     "403": {
                         "description": ":id is not int"
                     }
@@ -640,6 +680,13 @@
                 "operationId": "UserController.Delete",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
                         "in": "path",
                         "name": "id",
                         "description": "The id you want to delete",
@@ -650,6 +697,9 @@
                 "responses": {
                     "200": {
                         "description": "{string} delete success!"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
                     },
                     "403": {
                         "description": "id is empty"

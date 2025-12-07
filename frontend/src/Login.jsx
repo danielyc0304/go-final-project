@@ -36,7 +36,12 @@ const Login = ({ changePage, setLogged }) => {
       });
 
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        if(response.status == 401){
+          alert("登入失敗：" + "請檢查帳號密碼");
+        }
+        else {
+          throw new Error("Network response was not ok");
+        }
       }
 
       const data = await response.json();
@@ -45,10 +50,11 @@ const Login = ({ changePage, setLogged }) => {
         alert("登入成功！");
         // 登入成功後的跳轉邏輯，例如跳轉到首頁
         // setPage("dashboard"); 
-        localStorage.setItem("token", data.token);
-        setLogged(true)
+        localStorage.setItem("token", data.data.token);
+        localStorage.setItem("page", "welcome");
+        setLogged(true);
       } else {
-        alert("登入失敗：" + (data.message || "請檢查帳號密碼"));
+        // alert("登入失敗：" + (data.message || "請檢查帳號密碼"));
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -58,7 +64,7 @@ const Login = ({ changePage, setLogged }) => {
 
   return (
     <div className="login-container">
-      {/* 背景光暈效果 */}
+    {/* 背景光暈效果 */}
       <div className="decorative-glow glow-top-left"></div>
       <div className="decorative-glow glow-bottom-right"></div>
 

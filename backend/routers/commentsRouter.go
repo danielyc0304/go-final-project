@@ -81,6 +81,15 @@ func init() {
 
     beego.GlobalControllerRouter["backend/controllers:TradingController"] = append(beego.GlobalControllerRouter["backend/controllers:TradingController"],
         beego.ControllerComments{
+            Method: "CancelOrder",
+            Router: `/order/:id/cancel`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:TradingController"] = append(beego.GlobalControllerRouter["backend/controllers:TradingController"],
+        beego.ControllerComments{
             Method: "GetOrders",
             Router: `/orders`,
             AllowHTTPMethods: []string{"get"},

@@ -355,6 +355,11 @@ paths:
         <br>
       operationId: UserController.Get All
       parameters:
+      - in: header
+        name: Authorization
+        description: Bearer {token}
+        required: true
+        type: string
       - in: query
         name: query
         description: Filter. e.g. col1:v1,col2:v2 ...
@@ -385,6 +390,8 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
         "403":
           description: ""
     post:
@@ -395,6 +402,11 @@ paths:
         <br>
       operationId: UserController.Post
       parameters:
+      - in: header
+        name: Authorization
+        description: Bearer {token}
+        required: true
+        type: string
       - in: body
         name: body
         description: body for User content
@@ -404,6 +416,8 @@ paths:
       responses:
         "201":
           description: '{int} models.User'
+        "401":
+          description: Unauthorized
         "403":
           description: body is empty
   /user/{id}:
@@ -415,6 +429,11 @@ paths:
         <br>
       operationId: UserController.Get One
       parameters:
+      - in: header
+        name: Authorization
+        description: Bearer {token}
+        required: true
+        type: string
       - in: path
         name: id
         description: The key for staticblock
@@ -425,6 +444,8 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
         "403":
           description: :id is empty
     put:
@@ -435,6 +456,11 @@ paths:
         <br>
       operationId: UserController.Put
       parameters:
+      - in: header
+        name: Authorization
+        description: Bearer {token}
+        required: true
+        type: string
       - in: path
         name: id
         description: The id you want to update
@@ -451,6 +477,8 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
         "403":
           description: :id is not int
     delete:
@@ -461,6 +489,11 @@ paths:
         <br>
       operationId: UserController.Delete
       parameters:
+      - in: header
+        name: Authorization
+        description: Bearer {token}
+        required: true
+        type: string
       - in: path
         name: id
         description: The id you want to delete
@@ -469,6 +502,8 @@ paths:
       responses:
         "200":
           description: '{string} delete success!'
+        "401":
+          description: Unauthorized
         "403":
           description: id is empty
 definitions:

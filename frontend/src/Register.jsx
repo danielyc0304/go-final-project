@@ -38,7 +38,16 @@ const Register = ({ changePage }) => {
       });
 
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        if (response.status === 409) {
+          console.error('帳號已經存在');
+          // 在這裡處理 409 錯誤的邏輯，例如顯示特定的用戶訊息
+          alert('該項目帳號已經註冊');
+          changePage("login");
+          return;
+        }
+        else {
+            throw new Error("Network response was not ok");
+        }
       }
 
       const data = await response.json();
@@ -48,14 +57,15 @@ const Register = ({ changePage }) => {
       if (data.success) {
         console.log("Registration Successful");
         alert("Registration Successful");
-        localStorage.setItem("page", "login");
-        // setPage("login")
+        changePage("login")
       } else {
         console.error("Registration failed");
         alert("Registration failed");
       }
     } catch (error) {
       console.error("Registration failed with error");
+      console.log(error);
+
       alert("Registration failed with error");
     }
 

@@ -19,10 +19,12 @@
     justify-content: center;
     align-items: center;
     background: var(--primary-bg);
+    
     font-family: 'Inter', sans-serif;
     position: relative;
     overflow: hidden;
     color: var(--text-main);
+    
   }
   
   /* 背景光暈 (與 Welcome 相同) */

@@ -33,10 +33,10 @@ const SYMBOLS = [
   { symbol: "BTCUSDT", name: "Bitcoin" },
   { symbol: "ETHUSDT", name: "Ethereum" },
   { symbol: "SOLUSDT", name: "Solana" },
-  { symbol: "BNBUSDT", name: "BNB" },
-  { symbol: "XRPUSDT", name: "XRP" },
-  { symbol: "ADAUSDT", name: "Cardano" },
-  { symbol: "DOGEUSDT", name: "Dogecoin" },
+  // { symbol: "BNBUSDT", name: "BNB" },
+  // { symbol: "XRPUSDT", name: "XRP" },
+  // { symbol: "ADAUSDT", name: "Cardano" },
+  // { symbol: "DOGEUSDT", name: "Dogecoin" },
 ];
 
 /* ===== K 線元件 (修復資料載入時序問題) ===== */
@@ -131,7 +131,7 @@ function CandlestickChart({ data }) {
 export default function App() {
   const [logged, setLogged] = useState(false);
   const [symbol, setSymbol] = useState("BTCUSDT");
-  
+
   // [修改點 1] 改為空陣列，等待 API 填入
   const [kData, setKData] = useState([]); 
   
@@ -253,20 +253,142 @@ export default function App() {
   }, [q]);
 
   // 資金與倉位
-  const [cash, setCash] = useState(100000);
+  const [cash, setCash] = useState(-1);
   const [positions, setPositions] = useState([]);
   const [realized, setRealized] = useState(0);
 
+  async function handleCheckCash(){
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      console.error("未找到身份驗證 Token");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:8080/v1/trading/wallets", {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        
+        localStorage.setItem("wallet",JSON.stringify(data.wallets));
+        console.log("wallet : ", data.wallets);
+      } else {
+        console.error("Get wallet failed");
+      }
+    } catch (error) {
+      console.error("Wallet error:", error);
+    }  
+  }
+
+  useEffect(() => {
+    let counter = 0;
+    async function checkCashLoop() {
+
+    while(cash < 0 && counter < 1000){
+      handleCheckCash();
+      const wallet = JSON.parse(localStorage.getItem("wallet"));
+      // console.log("wallet from localStorage: ", wallet);
+      if (wallet && Array.isArray(wallet)) {
+        // 找到 USDT 的錢包
+        const usdtWallet = wallet.find(wallet => wallet.symbol === "USDT");
+        if (usdtWallet) {
+          console.log("USDT 錢包餘額:", usdtWallet.balance);
+          setCash(usdtWallet.balance); // 更新 cash 狀態
+        } else {
+          console.log("未找到 USDT 錢包");
+        }
+      }
+      console.log("未找到錢包");
+      counter ++;
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒鐘
+    }
+  }
+  checkCashLoop();
+  }, [cash]);
+
+
   // 下單
-  function submitOrder({ side, price, orderType, qtyCoin, leverage, notional, margin }) {
-    if (cash < margin) return alert("餘額不足");
-    setCash(c => c - margin);
-    const id = `${Date.now()}`;
-    const closePrice = side === "BUY" ? price * (1 - 1 / leverage) : price * (1 + 1 / leverage);
+  async function submitOrder({ side, price, orderType, qtyCoin, leverage, notional, margin }) {
+    if (cash < margin && side == "BUY") return alert("餘額不足");
+    setCash(-1);  
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error("未找到身份驗證 Token");
+      return;
+    }
+
+    let body = {
+      "symbol" : symbol,
+      "type" : orderType,
+      "side" : side,
+      "quantity" : parseFloat(qtyCoin),
+    };
     
-    setPositions(ps => [{
-      id, symbol, side, qty: qtyCoin, entry: price, leverage, notional, margin, closePrice, orderType
-    }, ...ps]);
+    // 如果是限價單，添加 limitPrice 屬性
+    if (orderType === "LIMIT") {
+      body.limitPrice = parseFloat(price);
+    }
+
+
+    console.log(body);
+
+
+    try {
+      const response = await fetch("http://localhost:8080/v1/trading/order", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        
+        const order = data.order;
+        console.log("order : ", data.order);
+
+        if(order.type == "MARKET"){
+          const leverage = 10;
+          const closePrice = order.side === "BUY" ? order.price * (1 - 1 / leverage) : order.price * (1 + 1 / leverage);
+          setPositions(ps => [{
+          id : order.id , symbol : order.symbol , side: order.side , qty: order.quantity , entry: order.price, leverage: leverage, notional: order.price, margin: order.price*leverage, closePrice, orderType: order.type
+          }, ...ps]);
+        }
+        else{
+          const leverage = 10;
+          const closePrice = order.side === "BUY" ? order.price * (1 - 1 / leverage) : order.price * (1 + 1 / leverage);
+          setPositions(ps => [{
+          id : order.id , symbol : order.symbol , side: order.side , qty: order.quantity , entry: order.limitPrice, leverage: leverage, notional: order.limitPrice, margin: order.limitPrice, closePrice, orderType: order.type
+          }, ...ps]);
+        }
+    
+      } else {
+        console.error("Get wallet failed");
+      }
+    } catch (error) {
+      console.error("Wallet error:", error);
+    }  
   }
 
   // 平倉
@@ -283,14 +405,67 @@ export default function App() {
   const unreal = useMemo(() => positions.reduce((sum, p) => sum + (lastPrice - p.entry) * p.qty * (p.side === "BUY" ? 1 : -1), 0), [positions, lastPrice]);
   const totalVal = useMemo(() => positions.reduce((sum, p) => sum + (p.qty || 0) * lastPrice, 0), [positions, lastPrice]);
 
-  // if (!logged) return <LoginPage onLogin={() => setLogged(true)} />;
-  if (!logged) return <Welcome setLogged = {setLogged}/>;
+  // 解析 JWT payload
+  function parseJwt(token) {
+    try {
+      const base64Url = token.split('.')[1]; // 第二段是 payload
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function isJwtValid(token) {
+    const payload = parseJwt(token);
+    if (!payload) return false;
+  
+    const now = Math.floor(Date.now() / 1000); // 現在時間，單位秒
+  
+    if (payload.nbf && now < payload.nbf) return false; // 未到生效時間
+    if (payload.exp && now >= payload.exp) return false; // 已過期
+  
+    return true;
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    console.log("token is : " , token);
+    console.log("checker alt : ", isJwtValid(token))
+
+    if (logged && !isJwtValid(token)) {
+      setLogged(false);
+    }
+    else if (!logged && isJwtValid(token)) {
+      setLogged(true);
+    }
+  }, [logged]);
+
+  function handleLogout() {
+    localStorage.removeItem("token"); // 清除 token
+    setLogged(false); // 更新 logged 狀態
+    console.log("已登出");
+  }
+
+    // if (!logged) return <LoginPage onLogin={() => setLogged(true)} />;
+    if (!logged) return <Welcome setLogged = {setLogged}/>;
+
 
   return (
     <div className="app">
       <header className="header">
         <div className="brand">Quantis</div>
-        <div className="header-right">USDT: {fmt.format(cash)}</div>
+        <div className="header-right">USDT: {fmt.format(cash)}
+          <button className="logout-btn" onClick={() => handleLogout()} title="登出">
+            <i className="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
       </header>
 
       <main className="content">
@@ -403,9 +578,9 @@ function TradePanel({ symbol, lastPrice, onSubmit }) {
     const [sl, setSl] = useState("");
 
     // Limit 模式下自動填入現價
-    useEffect(() => {
-        if (orderType === "LIMIT" && lastPrice > 0) setPrice(lastPrice.toFixed(2));
-    }, [orderType, lastPrice]);
+    // useEffect(() => {
+    //     if (orderType === "LIMIT" && lastPrice > 0) setPrice(lastPrice.toFixed(2));
+    // }, [orderType, lastPrice]);
 
     const parsedPrice = Number(price) || 0;
     const parsedQty = Number(qty) || 0;
@@ -438,7 +613,7 @@ function TradePanel({ symbol, lastPrice, onSubmit }) {
                 </div>
 
                 <label>價格 (USDT)</label>
-                <input value={orderType === "MARKET" ? "" : price} onChange={e => setPrice(e.target.value)} disabled={orderType === "MARKET"} placeholder={orderType === "MARKET" ? `${fmt.format(lastPrice)}（市價）` : ""} />
+                <input value={orderType === "MARKET" ? "" : price} onChange={e => setPrice(e.target.value)} disabled={orderType === "MARKET"} placeholder={orderType === "MARKET" ? `${fmt.format(lastPrice)}（市價）` : `${fmt.format(lastPrice)}`} />
 
                 <div className="qty-row">
                     <label>{inputMode === "COIN" ? `數量 (${symbol.replace("USDT", "")})` : "保證金 (USDT)"}</label>
@@ -447,7 +622,7 @@ function TradePanel({ symbol, lastPrice, onSubmit }) {
                 <input value={qty} onChange={e => setQty(e.target.value)} placeholder={inputMode === "COIN" ? "例如 0.01" : "例如 100"} />
 
                 <label>槓桿：{lev}x {closePrice ? <span className="lev-hint">（估平倉價：{fmt.format(closePrice)}）</span> : null}</label>
-                <input type="range" min="1" max="50" value={lev} onChange={e => setLev(Number(e.target.value))} />
+                <input type="range" min="1" max="100" value={lev} onChange={e => setLev(Number(e.target.value))} />
                 
                 <div className="tpsl-row">
                     <label className="inline"><input type="checkbox" checked={tpOn} onChange={e => setTpOn(e.target.checked)} /> TP</label>

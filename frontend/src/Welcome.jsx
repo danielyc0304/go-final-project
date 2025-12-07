@@ -4,7 +4,6 @@ import "./Welcome.css"; // 引入剛剛建立的 CSS 檔案
 import Register from "./Register.jsx";
 import Login from "./Login.jsx";
 import { useState } from "react";
-import Motion from "./Motion.jsx";
 
 const Welcome = ( {setLogged} ) => {
     const prevPath = localStorage.getItem("page");
@@ -36,7 +35,6 @@ const Welcome = ( {setLogged} ) => {
 
   return (
     <div>
-        {/* <Motion/> */}
     { (page === "welcome") ?
         <div className="welcome-container">
         {/* 背景裝飾光暈 */}
@@ -56,7 +54,7 @@ const Welcome = ( {setLogged} ) => {
             </div>
 
             {/* 文字內容區 */}
-            <h1 className="welcome-title">Quantis 智能演算</h1>
+            <h1 className="welcome-title">Quantis 煉金道場</h1>
             <p className="welcome-subtitle">
             在黑暗的數據海洋中，為您點亮決策之光。<br />
             專業級量化分析平台，洞察未來趨勢。
@@ -85,6 +83,7 @@ const Welcome = ( {setLogged} ) => {
         :
         <Register changePage={changePage}/>
     }
+
     </div>
   );
 };
