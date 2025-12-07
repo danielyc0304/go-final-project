@@ -286,6 +286,43 @@ export default function App() {
   // if (!logged) return <LoginPage onLogin={() => setLogged(true)} />;
   if (!logged) return <Welcome setLogged = {setLogged}/>;
 
+  // 解析 JWT payload
+  function parseJwt(token) {
+    try {
+      const base64Url = token.split('.')[1]; // 第二段是 payload
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function isJwtValid(token) {
+    const payload = parseJwt(token);
+    if (!payload) return false;
+  
+    const now = Math.floor(Date.now() / 1000); // 現在時間，單位秒
+  
+    if (payload.nbf && now < payload.nbf) return false; // 未到生效時間
+    if (payload.exp && now >= payload.exp) return false; // 已過期
+  
+    return true;
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!isJwtValid(token)) {
+      setLogged(false)
+    }
+  }, []);
+
+
   return (
     <div className="app">
       <header className="header">

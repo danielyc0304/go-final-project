@@ -36,7 +36,8 @@ const Welcome = ( {setLogged} ) => {
 
   return (
     <div>
-        {/* <Motion/> */}
+                {/* <Motion/> */}
+
     { (page === "welcome") ?
         <div className="welcome-container">
         {/* 背景裝飾光暈 */}
@@ -85,6 +86,7 @@ const Welcome = ( {setLogged} ) => {
         :
         <Register changePage={changePage}/>
     }
+
     </div>
   );
 };

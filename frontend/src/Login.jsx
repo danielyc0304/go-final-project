@@ -58,7 +58,7 @@ const Login = ({ changePage, setLogged }) => {
 
   return (
     <div className="login-container">
-      {/* 背景光暈效果 */}
+    {/* 背景光暈效果 */}
       <div className="decorative-glow glow-top-left"></div>
       <div className="decorative-glow glow-bottom-right"></div>
 

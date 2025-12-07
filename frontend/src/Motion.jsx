@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { Mail, Lock, ArrowRight } from "lucide-react";
+
 
 const Motion = () => {
   // --- 參數設定 ---
@@ -185,18 +187,80 @@ const Motion = () => {
         />
       </svg>
 
-      <div style={styles.overlay}>
+      {/* <div style={styles.overlay}>
         <div style={styles.priceBox}>
           <span style={{color: '#aaa', fontSize: '12px'}}>BTC/USD</span>
           <br/>
           <span style={styles.price}>{lastPrice}</span>
         </div>
+      </div> */}
+
+    <div style={styles.cardbg}>
+      <div className="login-card" >
+        <header className="login-header">
+          <h1 className="login-title">歡迎回來</h1>
+          <p className="login-subtitle">登入以繼續使用 Quantis 服務</p>
+        </header>
+
+        <form className="login-form">
+          
+          {/* Email 欄位 */}
+          <div className="input-group">
+            <input
+              type="email"
+              name="email"
+              placeholder="電子郵件 (Email)"
+              className="input-field"
+              value=""
+              required
+            />
+            <Mail size={20} className="input-icon" />
+          </div>
+
+          {/* 密碼欄位 */}
+          <div className="input-group">
+            <input
+              type="password"
+              name="password"
+              placeholder="您的密碼 (Password)"
+              className="input-field"
+              value=""
+              required
+            />
+            <Lock size={20} className="input-icon" />
+          </div>
+
+          {/* 登入按鈕 */}
+          <button type="submit" className="btn-submit">
+            立即登入 <ArrowRight size={18} style={{ display: 'inline', verticalAlign: 'text-bottom' }} />
+          </button>
+        </form>
+
+        <div className="login-footer">
+          還沒有帳號嗎？ 
+          <span 
+            className="link-register" 
+          >
+            立即註冊
+          </span>
+        </div>
       </div>
+    </div>  
+
     </div>
   );
 };
 
 const styles = {
+  cardbg: {
+      height: "100vh",
+      width: "100%",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      position: "relative",
+      overflow: "hidden",
+  },
   container: {
     position: 'relative',
     width: '100%',

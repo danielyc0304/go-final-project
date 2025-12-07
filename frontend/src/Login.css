@@ -26,6 +26,7 @@
     color: var(--text-main);
   }
   
+  
   /* 背景裝飾光暈 */
   .decorative-glow {
     position: absolute;
@@ -39,7 +40,8 @@
     left: 10%;
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(0,0,0,0) 70%);
+    /* background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(0,0,0,0) 70%); */
+    background: rgba(0, 0, 0, 0);
   }
   
   .glow-bottom-right {
@@ -48,6 +50,8 @@
     width: 400px;
     height: 400px;
     background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(0,0,0,0) 70%);
+    background: rgba(0, 0, 0, 0);
+
   }
   
   /* --- 登入卡片 --- */
