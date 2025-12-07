@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"backend/models"
+	"backend/utils"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -26,11 +27,20 @@ func (c *UserController) URLMapping() {
 // Post ...
 // @Title Post
 // @Description create User
+// @Param	Authorization	header	string	true	"Bearer {token}"
 // @Param	body		body 	models.User	true		"body for User content"
 // @Success 201 {int} models.User
+// @Failure 401 Unauthorized
 // @Failure 403 body is empty
 // @router / [post]
 func (c *UserController) Post() {
+	// JWT 驗證
+	_, err := utils.ValidateJWT(c.Ctx.Request)
+	if err != nil {
+		utils.RespondError(c.Ctx, 401, "Unauthorized: "+err.Error())
+		return
+	}
+
 	var v models.User
 	json.Unmarshal(c.Ctx.Input.RequestBody, &v)
 	if _, err := models.AddUser(&v); err == nil {
@@ -45,11 +55,20 @@ func (c *UserController) Post() {
 // GetOne ...
 // @Title Get One
 // @Description get User by id
+// @Param	Authorization	header	string	true	"Bearer {token}"
 // @Param	id		path 	string	true		"The key for staticblock"
 // @Success 200 {object} models.User
+// @Failure 401 Unauthorized
 // @Failure 403 :id is empty
 // @router /:id [get]
 func (c *UserController) GetOne() {
+	// JWT 驗證
+	_, err := utils.ValidateJWT(c.Ctx.Request)
+	if err != nil {
+		utils.RespondError(c.Ctx, 401, "Unauthorized: "+err.Error())
+		return
+	}
+
 	idStr := c.Ctx.Input.Param(":id")
 	id, _ := strconv.ParseInt(idStr, 0, 64)
 	v, err := models.GetUserById(id)
@@ -64,6 +83,7 @@ func (c *UserController) GetOne() {
 // GetAll ...
 // @Title Get All
 // @Description get User
+// @Param	Authorization	header	string	true	"Bearer {token}"
 // @Param	query	query	string	false	"Filter. e.g. col1:v1,col2:v2 ..."
 // @Param	fields	query	string	false	"Fields returned. e.g. col1,col2 ..."
 // @Param	sortby	query	string	false	"Sorted-by fields. e.g. col1,col2 ..."
@@ -71,9 +91,17 @@ func (c *UserController) GetOne() {
 // @Param	limit	query	string	false	"Limit the size of result set. Must be an integer"
 // @Param	offset	query	string	false	"Start position of result set. Must be an integer"
 // @Success 200 {object} models.User
+// @Failure 401 Unauthorized
 // @Failure 403
 // @router / [get]
 func (c *UserController) GetAll() {
+	// JWT 驗證
+	_, err := utils.ValidateJWT(c.Ctx.Request)
+	if err != nil {
+		utils.RespondError(c.Ctx, 401, "Unauthorized: "+err.Error())
+		return
+	}
+
 	var fields []string
 	var sortby []string
 	var order []string
@@ -127,12 +155,21 @@ func (c *UserController) GetAll() {
 // Put ...
 // @Title Put
 // @Description update the User
+// @Param	Authorization	header	string	true	"Bearer {token}"
 // @Param	id		path 	string	true		"The id you want to update"
 // @Param	body		body 	models.User	true		"body for User content"
 // @Success 200 {object} models.User
+// @Failure 401 Unauthorized
 // @Failure 403 :id is not int
 // @router /:id [put]
 func (c *UserController) Put() {
+	// JWT 驗證
+	_, err := utils.ValidateJWT(c.Ctx.Request)
+	if err != nil {
+		utils.RespondError(c.Ctx, 401, "Unauthorized: "+err.Error())
+		return
+	}
+
 	idStr := c.Ctx.Input.Param(":id")
 	id, _ := strconv.ParseInt(idStr, 0, 64)
 	v := models.User{Id: id}
@@ -148,11 +185,20 @@ func (c *UserController) Put() {
 // Delete ...
 // @Title Delete
 // @Description delete the User
+// @Param	Authorization	header	string	true	"Bearer {token}"
 // @Param	id		path 	string	true		"The id you want to delete"
 // @Success 200 {string} delete success!
+// @Failure 401 Unauthorized
 // @Failure 403 id is empty
 // @router /:id [delete]
 func (c *UserController) Delete() {
+	// JWT 驗證
+	_, err := utils.ValidateJWT(c.Ctx.Request)
+	if err != nil {
+		utils.RespondError(c.Ctx, 401, "Unauthorized: "+err.Error())
+		return
+	}
+
 	idStr := c.Ctx.Input.Param(":id")
 	id, _ := strconv.ParseInt(idStr, 0, 64)
 	if err := models.DeleteUser(id); err == nil {

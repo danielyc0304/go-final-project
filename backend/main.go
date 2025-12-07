@@ -5,6 +5,7 @@ import (
 	"backend/hub"
 	_ "backend/routers"
 	"backend/services"
+	"backend/utils"
 
 	beego "github.com/beego/beego/v2/server/web"
 )
@@ -23,5 +24,12 @@ func main() {
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
+
+	// 設定 CORS 中間件
+	beego.InsertFilter("*", beego.BeforeRouter, utils.CORSFilter)
+
+	// 設定 JWT 驗證中間件
+	beego.InsertFilter("*", beego.BeforeExec, utils.AuthMiddleware)
+
 	beego.Run()
 }
