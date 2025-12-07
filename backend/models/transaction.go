@@ -10,10 +10,13 @@ import (
 type TransactionType string
 
 const (
-	TransactionTypeBuy      TransactionType = "BUY"      // 買入
-	TransactionTypeSell     TransactionType = "SELL"     // 賣出
-	TransactionTypeDeposit  TransactionType = "DEPOSIT"  // 存款
-	TransactionTypeWithdraw TransactionType = "WITHDRAW" // 提款
+	TransactionTypeBuy            TransactionType = "BUY"             // 買入
+	TransactionTypeSell           TransactionType = "SELL"            // 賣出
+	TransactionTypeDeposit        TransactionType = "DEPOSIT"         // 存款
+	TransactionTypeWithdraw       TransactionType = "WITHDRAW"        // 提款
+	TransactionTypeMarginDeposit  TransactionType = "MARGIN_DEPOSIT"  // 保證金存入
+	TransactionTypeMarginWithdraw TransactionType = "MARGIN_WITHDRAW" // 保證金取出
+	TransactionTypeLiquidation    TransactionType = "LIQUIDATION"     // 爆倉
 )
 
 // Transaction 交易記錄
@@ -35,7 +38,7 @@ func init() {
 }
 
 // CreateTransaction 建立交易記錄
-func CreateTransaction(o orm.Ormer, userId int64, orderId *int64, txType TransactionType, symbol string, amount float64, balanceBefore float64, balanceAfter float64, description string) (*Transaction, error) {
+func CreateTransaction(o orm.QueryExecutor, userId int64, orderId *int64, txType TransactionType, symbol string, amount float64, balanceBefore float64, balanceAfter float64, description string) (*Transaction, error) {
 	tx := &Transaction{
 		User:          &User{Id: userId},
 		Type:          txType,

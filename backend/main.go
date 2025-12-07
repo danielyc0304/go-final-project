@@ -6,6 +6,7 @@ import (
 	_ "backend/routers"
 	"backend/services"
 	"backend/utils"
+	"time"
 
 	beego "github.com/beego/beego/v2/server/web"
 )
@@ -17,6 +18,16 @@ func init() {
 
 	// 啟動限價單撮合服務
 	services.GlobalLimitOrderMatcher.Start()
+
+	// 啟動槓桿倉位爆倉檢查服務（每 5 秒檢查一次）
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			services.CheckAndLiquidatePositions()
+			services.UpdateAllPositionsPnL()
+		}
+	}()
 }
 
 func main() {
