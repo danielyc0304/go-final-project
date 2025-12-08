@@ -97,8 +97,8 @@ func CreateLeveragePosition(userId int64, symbol string, side PositionSide, leve
 	o := orm.NewOrm()
 
 	// 驗證槓桿倍數
-	if leverage < 1 || leverage > 10 {
-		return nil, errors.New("leverage must be between 1 and 10")
+	if leverage < 1 || leverage > 100 {
+		return nil, errors.New("leverage must be between 1 and 100")
 	}
 
 	position := &LeveragePosition{
