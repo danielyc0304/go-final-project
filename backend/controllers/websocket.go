@@ -3,6 +3,7 @@ package controllers
 
 import (
 	"backend/hub" // 匯入 hub package
+	"backend/utils"
 	"log"
 	"net/http"
 
@@ -57,17 +58,32 @@ type WebSocketController struct {
 
 // Get() 處理 /ws 的連線請求
 func (wsc *WebSocketController) Get() {
+	// 從查詢參數或 Header 中獲取 JWT 令牌
+	token := wsc.Ctx.Request.Header.Get("Authorization")
+	if token == "" {
+		token = wsc.Ctx.Request.URL.Query().Get("token")
+	}
+
+	// 驗證 JWT
+	userId, err := utils.ValidateJWTToken(token)
+	if err != nil {
+		log.Println("WebSocket authentication failed:", err)
+		wsc.Abort("401")
+		return
+	}
+
 	conn, err := upgrader.Upgrade(wsc.Ctx.ResponseWriter, wsc.Ctx.Request, nil)
 	if err != nil {
 		log.Println("WebSocket upgrade failed:", err)
 		wsc.Abort("500")
 		return
 	}
-	log.Println("Client connected to WebSocket...")
+	log.Printf("Client connected to WebSocket with userId: %d", userId)
 
 	client := &hub.Client{
-		Conn: conn,
-		Send: make(chan []byte, 256),
+		Conn:   conn,
+		Send:   make(chan []byte, 256),
+		UserId: userId,
 	}
 
 	// 向 GlobalHub 註冊這個 Client

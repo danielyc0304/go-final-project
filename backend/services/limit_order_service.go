@@ -1,6 +1,7 @@
 package services
 
 import (
+	"backend/hub"
 	"backend/models"
 	"errors"
 	"fmt"
@@ -145,6 +146,11 @@ func (m *LimitOrderMatcher) checkAndExecuteOrders() {
 	}
 }
 
+// ExecuteLimitOrder 執行限價單
+func (m *LimitOrderMatcher) ExecuteLimitOrder(order *models.Order, currentPrice float64) error {
+	return m.executeLimitOrder(order, currentPrice)
+}
+
 // executeLimitOrder 執行限價單
 func (m *LimitOrderMatcher) executeLimitOrder(order *models.Order, currentPrice float64) error {
 	// 解析交易對
@@ -214,6 +220,18 @@ func (m *LimitOrderMatcher) executeLimitOrder(order *models.Order, currentPrice 
 	log.Printf("Limit order #%d executed successfully: %s %s %.8f at price %.2f, total %.2f",
 		order.Id, order.Side, order.Symbol, actualQuantity, currentPrice, totalAmount)
 
+	// 發送 WebSocket 通知給用戶
+	message := models.NewLimitOrderFilledMessage(
+		order.Id,
+		order.Symbol,
+		order.Side,
+		order.LimitPrice,
+		currentPrice,
+		actualQuantity,
+		totalAmount,
+	)
+	hub.GlobalHub.BroadcastToUser(userId, message.ToJSON())
+
 	return nil
 }
 
@@ -261,11 +279,51 @@ func PlaceLimitOrder(userId int64, symbol string, side models.OrderSide, quantit
 		return nil, fmt.Errorf("failed to create order: %v", err)
 	}
 
-	// 3. 加入撮合器監控
-	GlobalLimitOrderMatcher.AddOrder(order)
+	// 3. 獲取當前市價並檢查是否應該立即成交
+	currentPrice, ok := GlobalPriceCache.GetPrice(symbol)
 
-	log.Printf("Limit order created: User=%d, Symbol=%s, Side=%s, Quantity=%.8f, LimitPrice=%.2f",
-		userId, symbol, side, quantity, limitPrice)
+	// 判斷是否應該立即執行訂單
+	shouldExecuteImmediately := false
+	if ok {
+		if side == models.OrderSideBuy {
+			// 買入限價單：當市價 <= 限價時可以立即成交
+			if currentPrice <= limitPrice {
+				shouldExecuteImmediately = true
+			}
+		} else {
+			// 賣出限價單：當市價 >= 限價時可以立即成交
+			if currentPrice >= limitPrice {
+				shouldExecuteImmediately = true
+			}
+		}
+	}
+
+	// 4a. 如果應該立即成交，執行市價成交邏輯
+	if shouldExecuteImmediately {
+		log.Printf("Limit order #%d will be executed immediately: %s %s at %.2f (current price: %.2f)",
+			order.Id, side, symbol, limitPrice, currentPrice)
+
+		// 執行訂單（使用當前市價，但不超過限價）
+		executionPrice := currentPrice
+		if side == models.OrderSideBuy && executionPrice > limitPrice {
+			executionPrice = limitPrice
+		} else if side == models.OrderSideSell && executionPrice < limitPrice {
+			executionPrice = limitPrice
+		}
+
+		err := GlobalLimitOrderMatcher.ExecuteLimitOrder(order, executionPrice)
+		if err != nil {
+			log.Printf("Failed to execute limit order #%d immediately: %v", order.Id, err)
+			// 如果立即執行失敗，改為加入待處理列表，稍後重試
+			GlobalLimitOrderMatcher.AddOrder(order)
+		}
+		// 成功執行，無需加入待處理列表
+	} else {
+		// 4b. 如果不應該立即成交，加入撮合器監控
+		log.Printf("Limit order #%d added to matcher: %s %s at %.2f (current price: %.2f)",
+			order.Id, side, symbol, limitPrice, currentPrice)
+		GlobalLimitOrderMatcher.AddOrder(order)
+	}
 
 	return order, nil
 }

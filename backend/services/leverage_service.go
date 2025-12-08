@@ -1,6 +1,7 @@
 package services
 
 import (
+	"backend/hub"
 	"backend/models"
 	"errors"
 	"fmt"
@@ -105,8 +106,47 @@ func OpenLeveragePositionLimit(userId int64, symbol string, side models.Position
 		return nil, fmt.Errorf("failed to create position: %v", err)
 	}
 
-	// 7. 加入限價單撮合器監控
-	GlobalLimitOrderMatcher.AddOrder(order)
+	// 7. 加入限價單撮合器監控（檢查價格，可能立即執行）
+	currentPrice, ok := GlobalPriceCache.GetPrice(symbol)
+	shouldExecuteImmediately := false
+
+	if ok {
+		if side == models.PositionSideLong {
+			// 買入限價單：當市價 <= 限價時可以立即成交
+			if currentPrice <= limitPrice {
+				shouldExecuteImmediately = true
+			}
+		} else {
+			// 賣出限價單：當市價 >= 限價時可以立即成交
+			if currentPrice >= limitPrice {
+				shouldExecuteImmediately = true
+			}
+		}
+	}
+
+	if shouldExecuteImmediately {
+		log.Printf("Leverage limit order #%d will be executed immediately: %s %s at %.2f (current price: %.2f)",
+			order.Id, side, symbol, limitPrice, currentPrice)
+
+		// 執行訂單（使用當前市價，但不超過限價）
+		executionPrice := currentPrice
+		if side == models.PositionSideLong && executionPrice > limitPrice {
+			executionPrice = limitPrice
+		} else if side == models.PositionSideShort && executionPrice < limitPrice {
+			executionPrice = limitPrice
+		}
+
+		err := GlobalLimitOrderMatcher.ExecuteLimitOrder(order, executionPrice)
+		if err != nil {
+			log.Printf("Failed to execute leverage limit order #%d immediately: %v", order.Id, err)
+			// 如果立即執行失敗，改為加入待處理列表，稍後重試
+			GlobalLimitOrderMatcher.AddOrder(order)
+		}
+	} else {
+		log.Printf("Leverage limit order #%d added to matcher: %s %s at %.2f (current price: %.2f)",
+			order.Id, side, symbol, limitPrice, currentPrice)
+		GlobalLimitOrderMatcher.AddOrder(order)
+	}
 
 	// 8. 記錄交易
 	transactionType := models.TransactionTypeMarginDeposit
@@ -127,6 +167,10 @@ func OpenLeveragePositionLimit(userId int64, symbol string, side models.Position
 
 	log.Printf("Leverage position (limit order) created: User=%d, Symbol=%s, Side=%s, Leverage=%dx, Quantity=%.8f, LimitPrice=%.2f, Margin=%.2f",
 		userId, symbol, side, leverage, quantity, limitPrice, margin)
+
+	// 發送 WebSocket 通知給用戶
+	message := models.NewLeveragePositionOpenedMessage(position)
+	hub.GlobalHub.BroadcastToUser(userId, message.ToJSON())
 
 	return position, nil
 }
@@ -216,6 +260,10 @@ func OpenLeveragePosition(userId int64, symbol string, side models.PositionSide,
 	log.Printf("Leverage position opened: User=%d, Symbol=%s, Side=%s, Leverage=%dx, Quantity=%.8f, EntryPrice=%.2f, Margin=%.2f",
 		userId, symbol, side, leverage, quantity, currentPrice, margin)
 
+	// 發送 WebSocket 通知給用戶
+	message := models.NewLeveragePositionOpenedMessage(position)
+	hub.GlobalHub.BroadcastToUser(userId, message.ToJSON())
+
 	return position, nil
 }
 
@@ -294,6 +342,10 @@ func CloseLeveragePosition(userId int64, positionId int64) (*models.LeveragePosi
 	log.Printf("Leverage position closed: User=%d, Position=#%d, ExitPrice=%.2f, PnL=%.2f",
 		userId, positionId, currentPrice, pnl)
 
+	// 發送 WebSocket 通知給用戶
+	message := models.NewLeveragePositionClosedMessage(position, currentPrice)
+	hub.GlobalHub.BroadcastToUser(userId, message.ToJSON())
+
 	return position, nil
 }
 
@@ -365,6 +417,11 @@ func liquidatePosition(position *models.LeveragePosition) error {
 	shouldRollback = false
 
 	log.Printf("Position #%d liquidated successfully", position.Id)
+
+	// 發送 WebSocket 通知給用戶
+	message := models.NewLeveragePositionClosedMessage(position, position.LiquidationPrice)
+	hub.GlobalHub.BroadcastToUser(userId, message.ToJSON())
+
 	return nil
 }
 

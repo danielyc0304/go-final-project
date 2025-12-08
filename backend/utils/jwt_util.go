@@ -76,8 +76,20 @@ func ValidateJWT(r *http.Request) (int64, error) {
 		return 0, errors.New("invalid authorization header format")
 	}
 
+	return ValidateJWTToken(tokenString)
+}
+
+// ValidateJWTToken 驗證 JWT 令牌字符串並返回使用者 ID
+func ValidateJWTToken(token string) (int64, error) {
+	if token == "" {
+		return 0, errors.New("missing token")
+	}
+
+	// 移除 "Bearer " 前綴（如果有的話）
+	token = strings.TrimPrefix(token, "Bearer ")
+
 	// 解析 token
-	claims, err := ParseToken(tokenString)
+	claims, err := ParseToken(token)
 	if err != nil {
 		return 0, err
 	}
