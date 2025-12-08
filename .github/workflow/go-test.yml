@@ -1,0 +1,41 @@
+name: Go Test & Vet
+
+# 觸發時機：當 Push 到 main 分支，或是發起 Pull Request 時
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    # 設定工作目錄為 backend (因為您的 go.mod 在這裡)
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    # 1. 下載程式碼
+    - uses: actions/checkout@v4
+
+    # 2. 設定 Go 環境
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23' # 請確認這跟您的 go.mod 版本一致
+
+    # 3. 下載依賴套件
+    - name: Install dependencies
+      run: go mod download
+
+    # 4. 執行靜態分析 (go vet)
+    - name: Run go vet
+      run: go vet ./...
+
+    # 5. 執行單元測試 (go test)
+    - name: Run go test
+      # -v: 顯示詳細輸出
+      # ./...: 遞迴測試所有子資料夾
+      run: go test -v ./...

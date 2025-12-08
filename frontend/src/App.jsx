@@ -197,9 +197,12 @@ export default function App() {
   useEffect(() => {
     if (!logged) return;
 
-    // 建立 WS 連線 (透過 Vite Proxy 轉發 /ws -> backend:8080)
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//localhost:8080/ws`;
+    // [修改] 直接寫死 Cloudflare Tunnel 的 WebSocket 網址
+    const token = localStorage.getItem("token");
+    const wsUrl = `wss://quantis.zzppss.org/ws?token=${token}`;
+
+    console.log("Connecting to WebSocket:", wsUrl); 
+
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => console.log("WebSocket 已連線");
