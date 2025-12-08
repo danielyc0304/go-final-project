@@ -88,7 +88,7 @@ func (wsc *WebSocketController) Get() {
 
 	client := &hub.Client{
 		Conn:   conn,
-		Send:   make(chan []byte, 256),
+		Send:   make(chan []byte, 2048),
 		UserId: userId,
 	}
 

@@ -38,8 +38,8 @@ func NewHub() *Hub {
 	return &Hub{
 		Clients:         make(map[*Client]bool),
 		ClientsByUserId: make(map[int64][]*Client),
-		Broadcast:       make(chan []byte, 256),
-		UserBroadcast:   make(chan UserMessage, 256),
+		Broadcast:       make(chan []byte, 1024),
+		UserBroadcast:   make(chan UserMessage, 1024),
 		Register:        make(chan *Client),
 		Unregister:      make(chan *Client),
 	}
@@ -80,9 +80,8 @@ func (h *Hub) Run() {
 				select {
 				case client.Send <- message:
 				default:
-					close(client.Send)
-					delete(h.Clients, client)
-					log.Println("Client send buffer full. Disconnecting client.")
+					// 非阻塞發送失敗時，緩衝區已滿，跳過此客戶端而非斷開連接
+					log.Printf("Client send buffer full for user %d. Skipping message delivery.", client.UserId)
 				}
 			}
 		case userMsg := <-h.UserBroadcast:
@@ -92,9 +91,8 @@ func (h *Hub) Run() {
 					select {
 					case client.Send <- userMsg.Message:
 					default:
-						close(client.Send)
-						delete(h.Clients, client)
-						log.Println("Client send buffer full. Disconnecting client.")
+						// 非阻塞發送失敗時，緩衝區已滿，跳過此客戶端而非斷開連接
+						log.Printf("Client send buffer full for user %d. Skipping message delivery.", client.UserId)
 					}
 				}
 			}
