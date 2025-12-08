@@ -22,8 +22,8 @@ func OpenLeveragePositionLimit(userId int64, symbol string, side models.Position
 		return nil, errors.New("quantity must be positive")
 	}
 
-	if leverage < 1 || leverage > 10 {
-		return nil, errors.New("leverage must be between 1 and 10")
+	if leverage < 1 || leverage > 100 {
+		return nil, errors.New("leverage must be between 1 and 100")
 	}
 
 	if limitPrice <= 0 {
