@@ -7,8 +7,9 @@ import (
 // CORSFilter 用於處理 CORS 請求
 func CORSFilter(ctx *context.Context) {
 	allowedOrigins := map[string]bool{
-		"http://localhost:3000": true,
-		"http://localhost:5173": true,
+		"http://localhost:3000":      true,
+		"http://localhost:5173":      true,
+		"https://quantis.zzppss.org": true,
 	}
 
 	origin := ctx.Input.Header("Origin")

@@ -27,7 +27,12 @@ const Register = ({ changePage }) => {
 
     try {
       console.log("Register working...");
-      const response = await fetch("http://localhost:8080/v1/auth/registration", {
+      console.log("Register working...");
+      
+      // 取得 API 基礎網址
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+      
+      const response = await fetch(`${API_BASE_URL}/v1/auth/registration`, {
         method: "POST",
         credentials: "include",
         headers: {

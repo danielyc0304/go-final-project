@@ -26,8 +26,9 @@ const Login = ({ changePage, setLogged }) => {
 
     try {
       // 修改為 Login API
-      const response = await fetch("http://localhost:8080/v1/auth/login", {
-        method: "POST",
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+      
+      const response = await fetch(`${API_BASE_URL}/v1/auth/login`, {        method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",

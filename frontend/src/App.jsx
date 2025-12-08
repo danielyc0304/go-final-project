@@ -129,6 +129,7 @@ function CandlestickChart({ data }) {
 
 /* ===== 主應用 ===== */
 export default function App() {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
   const [logged, setLogged] = useState(false);
   const [symbol, setSymbol] = useState("BTCUSDT");
 
@@ -157,8 +158,7 @@ export default function App() {
         setKData([]); // 切換前先清空，避免圖表殘留
         
         // 呼叫後端 API (透過 Vite Proxy 轉發 /v1 -> backend:8080)
-        const res = await fetch(`/v1/market/klines?symbol=${symbol}&interval=1m&limit=1000`);
-        const json = await res.json();
+        const res = await fetch(`${API_BASE_URL}/v1/market/klines?symbol=${symbol}&interval=1m&limit=1000`);        const json = await res.json();
         
         if (json.success && Array.isArray(json.data)) {
           // 確保時間由舊到新排序
@@ -261,11 +261,11 @@ export default function App() {
     const token = localStorage.getItem('token');
 
     if (!token) {
-      console.error("未找到身份驗證 Token");
+      //console.error("未找到身份驗證 Token");
       return;
     }
     try {
-      const response = await fetch("http://localhost:8080/v1/trading/wallets", {
+      const response = await fetch(`${API_BASE_URL}/v1/trading/wallets`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -309,16 +309,20 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (!logged) return;
     checkOwn();
     handleCheckCash();
 
     let counter = 0;
     async function checkCashLoop() {
       while(cash < 0 && counter < 1000 && logged){
+        // 再次檢查 logged，因為在 await 期間狀態可能變了
+        if (!logged) break; 
+        
         checkOwn();
         handleCheckCash();
         counter ++;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒鐘
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
       }
   }
   checkCashLoop();
@@ -354,7 +358,7 @@ export default function App() {
 
 
     try {
-      const response = await fetch("http://localhost:8080/v1/leverage/position/open", {
+      const response = await fetch(`${API_BASE_URL}/v1/leverage/position/open`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -388,13 +392,13 @@ export default function App() {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.error("未找到身份驗證 Token");
-      alert("未找到身份驗證 Token，請重新登入");
+      //console.error("未找到身份驗證 Token");
+      //alert("未找到身份驗證 Token，請重新登入");
       return;
     }
 
     try {
-      const response = await fetch("http://localhost:8080/v1/leverage/positions/history", {
+      const response = await fetch(`${API_BASE_URL}/v1/leverage/positions/history`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -467,7 +471,7 @@ export default function App() {
       return;
     }
 
-    const apiUrl = `http://localhost:8080/v1/leverage/position/${p.id}/close`;
+    const apiUrl = `${API_BASE_URL}/v1/leverage/position/${p.id}/close`;
 
     try {
       const response = await fetch(apiUrl, {

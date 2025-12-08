@@ -14,6 +14,7 @@ func AuthMiddleware(ctx *context.Context) {
 		"/v1/auth/registration",
 		"/v1/auth/login",
 		"/v1/market/klines",
+		"/swagger",
 	}
 
 	// 檢查路由是否在白名單中
