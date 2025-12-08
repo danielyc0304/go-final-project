@@ -44,70 +44,85 @@ function CandlestickChart({ data }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
-  
-  // 用來記錄目前圖表上最後一筆資料的時間，避免重複 setData
-  const lastTimeRef = useRef(0);
+  const prevDataLengthRef = useRef(0);
 
-  // 1. 初始化圖表 (這部分跟您原本的一樣，不用動)
+  // [新增] 使用 ref 隨時記錄最新的 data，解決閉包舊資料問題
+  const latestDataRef = useRef(data);
+  useEffect(() => {
+    latestDataRef.current = data;
+  }, [data]);
+
+  // 1. 初始化圖表
   useEffect(() => {
     let chart;
+    let series;
+    let ro;
+
     (async () => {
       const { createChart, CandlestickSeries } = await import("lightweight-charts");
-      if (!containerRef.current) return;
+      const el = containerRef.current;
+      if (!el) return;
 
-      chart = createChart(containerRef.current, {
-        width: containerRef.current.clientWidth,
+      chart = createChart(el, {
+        width: el.clientWidth,
         height: 560,
         layout: { background: { type: "solid", color: "#0f1115" }, textColor: "#e6e6e6" },
         grid: { vertLines: { color: "#1b1f2a" }, horzLines: { color: "#1b1f2a" } },
-        timeScale: { timeVisible: true, secondsVisible: false },
+        rightPriceScale: { borderColor: "#2a2f3b" },
+        timeScale: { borderColor: "#2a2f3b", timeVisible: true, secondsVisible: false },
+        crosshair: { mode: 1 },
       });
 
-      const series = chart.addSeries(CandlestickSeries, {
+      series = chart.addSeries(CandlestickSeries, {
         upColor: "#26a69a", downColor: "#ef5350",
         wickUpColor: "#26a69a", wickDownColor: "#ef5350",
+        borderVisible: false,
       });
+
+      // [關鍵修正] 初始化完成時，直接讀取 ref 裡的「最新資料」，而不是閉包裡的舊 data
+      if (latestDataRef.current && latestDataRef.current.length > 0) {
+        series.setData(latestDataRef.current);
+        prevDataLengthRef.current = latestDataRef.current.length;
+      }
 
       chartRef.current = chart;
       seriesRef.current = series;
 
-      // 觀察視窗大小
-      const ro = new ResizeObserver(() => {
-        if (containerRef.current) chart.applyOptions({ width: containerRef.current.clientWidth });
+      ro = new ResizeObserver(() => {
+        if (containerRef.current) {
+          chart.applyOptions({ width: containerRef.current.clientWidth });
+        }
       });
-      ro.observe(containerRef.current);
+      ro.observe(el);
     })();
 
     return () => {
+      if (ro) ro.disconnect();
       if (chart) chart.remove();
     };
-  }, []);
+  }, []); // 只執行一次
 
-  // 2. 數據更新邏輯 (這是修復的重點)
+  // 2. 數據更新邏輯
   useEffect(() => {
-    if (!seriesRef.current || data.length === 0) return;
+    // 如果圖表還沒建立好，就先略過，反正初始化那邊(上面)會去抓最新的
+    if (!seriesRef.current) return;
 
-    const lastData = data[data.length - 1];
-    
-    // 如果圖表是空的，或者資料長度差異太大(代表切換幣種或重新載入)，使用 setData (重繪)
-    // 判斷依據：如果當前這筆資料的時間 比 上次紀錄的時間 差太多(例如超過2分鐘)，視為重置
-    // 或者簡單點：如果 data 只有一兩筆變化，就 update；如果是一大包，就 setData
-    
-    // 這裡我們用一個簡單的邏輯：
-    // 如果是第一次載入 (lastTimeRef.current === 0) -> setData
-    // 否則 -> update
-    
-    if (lastTimeRef.current === 0 || Math.abs(lastData.time - lastTimeRef.current) > 3600) {
-        // 視為初始化或切換幣種
-        seriesRef.current.setData(data);
+    // 如果資料是空的，也沒必要畫
+    if (data.length === 0) return;
+
+    const prevLength = prevDataLengthRef.current;
+    const currLength = data.length;
+    const lastCandle = data[currLength - 1];
+
+    // 判斷是歷史載入(大量) 還是 即時更新(單筆)
+    if (prevLength === 0 || Math.abs(currLength - prevLength) > 1) {
+      seriesRef.current.setData(data);
     } else {
-        // 視為即時更新 (Lightweight Charts 的 update 會自動處理新K線或更新舊K線)
-        seriesRef.current.update(lastData);
+      seriesRef.current.update(lastCandle);
     }
 
-    lastTimeRef.current = lastData.time;
-
-  }, [data]); // 只要 data 變了就會觸發
+    prevDataLengthRef.current = currLength;
+  }, [data]);
 
   return <div className="chart" ref={containerRef} />;
 }
@@ -171,50 +186,49 @@ export default function App() {
 
     ws.onopen = () => console.log("WebSocket 已連線");
 
-    // 在 App.js 的 useEffect 裡的 ws.onmessage
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        const s = symbol.toLowerCase();
-        const time = Math.floor(msg.data.T / 1000); // 這裡是秒
 
+        // 1. [除錯] 確保有收到資料
+        // console.log("Length:", Object.keys(msg.data).length);
+        if(Object.keys(msg.data).length != 9)
+          console.log("收到 WS:", msg);
+
+        const s = symbol.toLowerCase();
+
+        // 2. 確保是當前幣種的 trade 數據
         if (msg.stream === `${s}@trade` && msg.data) {
           const price = parseFloat(msg.data.p);
-          
-          // [關鍵 1] 強制處理時間：如果是毫秒(13位)就除以1000，確保是「秒」
-          let time = msg.data.T; 
-          if (time > 10000000000) time = Math.floor(time / 1000);
+          const time = Math.floor(msg.data.T / 1000);
+
+          // 3. [除錯] 確保有進入更新邏輯
+          // console.log("更新價格:", price);
 
           setKData((prev) => {
-            if (prev.length === 0) return prev; // 如果還沒載入歷史資料，先不更新
+            if (prev.length === 0) return prev;
 
             const newData = [...prev];
             const lastIndex = newData.length - 1;
             const last = newData[lastIndex];
 
-            // [關鍵 2] 確保歷史資料最後一根的時間也是「秒」
-            const lastTime = last.time > 10000000000 ? Math.floor(last.time / 1000) : last.time;
-
-            // 判斷：是「更新當前這根」還是「產生新的一根」
-            // 只有當新時間 >= 上一根時間 + 60秒，才算新的一根
-            if (time >= lastTime + 60) {
-              // --- 新的一根 K 線 ---
-              const newKLineTime = Math.floor(time / 60) * 60;
-              newData.push({
-                time: newKLineTime,
-                open: price, high: price, low: price, close: price
-              });
-              // 保持陣列長度不要無限增長
-              if (newData.length > 2000) newData.shift();
+            // 判斷是否為新的一分鐘
+            if (time >= last.time + 60) {
+                // 開新 K 線
+                const newTime = Math.floor(time / 60) * 60;
+                newData.push({
+                    time: newTime,
+                    open: price, high: price, low: price, close: price
+                });
+                if (newData.length > 2000) newData.shift();
             } else {
-              // --- 更新最後一根 (High/Low/Close) ---
-              newData[lastIndex] = {
-                ...last,
-                time: lastTime, // 確保時間格式一致
-                close: price,
-                high: Math.max(last.high, price),
-                low: Math.min(last.low, price)
-              };
+                // [修正點] 建立一個"新物件"來更新，確保 React 偵測到變化
+                newData[lastIndex] = {
+                    ...last,
+                    close: price,
+                    high: Math.max(last.high, price),
+                    low: Math.min(last.low, price)
+                };
             }
             return newData;
           });
