@@ -415,7 +415,7 @@ export default function App() {
   }
 
   // 查詢持倉
-  async function checkOwn(lastPrice) {
+  async function checkOwn() {
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -463,7 +463,7 @@ export default function App() {
                 entry: order.entryPrice,
                 leverage: order.leverage,
                 // 名目價值 Notional 應該使用 entryPrice 或 markPrice，這裡使用傳入的 lastPrice (市場價)
-                notional: order.quantity * (lastPrice || order.entryPrice),
+                notional: order.quantity * order.entryPrice,
                 margin: order.margin,
                 closePrice : order.liquidationPrice,
                 orderType: order.orderType || (order.type === "MARKET" ? "MARKET" : "LIMIT"), // 後端回傳的可能是 orderType 或 type
