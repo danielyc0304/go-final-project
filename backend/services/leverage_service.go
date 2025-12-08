@@ -9,6 +9,128 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 )
 
+// OpenLeveragePositionMarket 用市價單開槓桿倉位
+func OpenLeveragePositionMarket(userId int64, symbol string, side models.PositionSide, leverage int, quantity float64) (*models.LeveragePosition, error) {
+	return OpenLeveragePosition(userId, symbol, side, leverage, quantity)
+}
+
+// OpenLeveragePositionLimit 用限價單開槓桿倉位
+func OpenLeveragePositionLimit(userId int64, symbol string, side models.PositionSide, leverage int, quantity float64, limitPrice float64) (*models.LeveragePosition, error) {
+	// 1. 驗證輸入
+	if quantity <= 0 {
+		return nil, errors.New("quantity must be positive")
+	}
+
+	if leverage < 1 || leverage > 10 {
+		return nil, errors.New("leverage must be between 1 and 10")
+	}
+
+	if limitPrice <= 0 {
+		return nil, errors.New("limit price must be positive")
+	}
+
+	_, quote, err := models.ParseSymbol(symbol)
+	if err != nil {
+		return nil, err
+	}
+
+	if quote != "USDT" {
+		return nil, errors.New("only USDT pairs are supported for leverage trading")
+	}
+
+	// 2. 建立限價訂單
+	order, err := models.CreateOrder(userId, symbol, models.OrderTypeLimit,
+		func() models.OrderSide {
+			if side == models.PositionSideLong {
+				return models.OrderSideBuy
+			} else {
+				return models.OrderSideSell
+			}
+		}(), quantity, &limitPrice)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create order: %v", err)
+	}
+
+	// 3. 計算所需保證金
+	margin := models.CalculateRequiredMargin(limitPrice, quantity, leverage)
+
+	// 4. 開始資料庫交易
+	o := orm.NewOrm()
+	to, err := o.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %v", err)
+	}
+
+	shouldRollback := true
+	defer func() {
+		if shouldRollback {
+			to.Rollback()
+		}
+	}()
+
+	// 5. 檢查並扣除保證金（從 USDT 錢包）
+	wallet, err := models.GetWalletByUserAndSymbol(userId, "USDT")
+	if err != nil {
+		return nil, errors.New("USDT wallet not found")
+	}
+
+	if wallet.Balance < margin {
+		return nil, fmt.Errorf("insufficient USDT balance: required %.2f, available %.2f", margin, wallet.Balance)
+	}
+
+	// 扣除保證金
+	err = models.UpdateBalance(to, wallet.Id, -margin, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deduct margin: %v", err)
+	}
+
+	// 6. 創建槓桿倉位（狀態為 PENDING，等待限價單成交）
+	position := &models.LeveragePosition{
+		User:       &models.User{Id: userId},
+		Order:      order,
+		Symbol:     symbol,
+		Side:       side,
+		Leverage:   leverage,
+		EntryPrice: limitPrice, // 暫時設為限價
+		Quantity:   quantity,
+		Margin:     margin,
+		Status:     models.PositionStatusOpen, // 先設為 OPEN，會在限價單成交時更新
+	}
+
+	// 計算爆倉價格
+	position.LiquidationPrice = position.CalculateLiquidationPrice()
+
+	_, err = to.Insert(position)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create position: %v", err)
+	}
+
+	// 7. 加入限價單撮合器監控
+	GlobalLimitOrderMatcher.AddOrder(order)
+
+	// 8. 記錄交易
+	transactionType := models.TransactionTypeMarginDeposit
+	description := fmt.Sprintf("Open %s position #%d with %dx leverage (Limit Order)", side, position.Id, leverage)
+	_, err = models.CreateTransaction(to, userId, nil, transactionType, "USDT", -margin,
+		wallet.Balance+margin, wallet.Balance, description)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create transaction: %v", err)
+	}
+
+	// 9. 提交交易
+	err = to.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %v", err)
+	}
+
+	shouldRollback = false
+
+	log.Printf("Leverage position (limit order) created: User=%d, Symbol=%s, Side=%s, Leverage=%dx, Quantity=%.8f, LimitPrice=%.2f, Margin=%.2f",
+		userId, symbol, side, leverage, quantity, limitPrice, margin)
+
+	return position, nil
+}
+
 // OpenLeveragePosition 開槓桿倉位
 func OpenLeveragePosition(userId int64, symbol string, side models.PositionSide, leverage int, quantity float64) (*models.LeveragePosition, error) {
 	// 1. 驗證輸入

@@ -18,7 +18,6 @@ type LimitOrderMatcher struct {
 	stopChan      chan struct{}
 	checkInterval time.Duration
 	pendingOrders map[int64]*models.Order // orderId -> Order
-	lastCheckTime time.Time
 }
 
 var GlobalLimitOrderMatcher *LimitOrderMatcher

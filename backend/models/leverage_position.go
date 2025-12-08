@@ -28,6 +28,7 @@ const (
 type LeveragePosition struct {
 	Id               int64          `orm:"auto" json:"id"`
 	User             *User          `orm:"rel(fk)" json:"-"`
+	Order            *Order         `orm:"rel(fk);null" json:"-"`                                  // 關聯的開倉訂單
 	Symbol           string         `orm:"size(20)" json:"symbol"`                                 // 交易對：BTCUSDT, ETHUSDT, SOLUSDT
 	Side             PositionSide   `orm:"size(10)" json:"side"`                                   // LONG or SHORT
 	Leverage         int            `orm:"default(1)" json:"leverage"`                             // 槓桿倍數：1-10

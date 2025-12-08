@@ -17,10 +17,12 @@ type LeverageController struct {
 
 // OpenPositionRequest 開倉請求
 type OpenPositionRequest struct {
-	Symbol   string              `json:"symbol" valid:"Required"`   // 交易對：BTCUSDT, ETHUSDT, SOLUSDT
-	Side     models.PositionSide `json:"side" valid:"Required"`     // LONG 或 SHORT
-	Leverage int                 `json:"leverage" valid:"Required"` // 槓桿倍數 1-10
-	Quantity float64             `json:"quantity" valid:"Required"` // 數量
+	Symbol     string              `json:"symbol" valid:"Required"`    // 交易對：BTCUSDT, ETHUSDT, SOLUSDT
+	Side       models.PositionSide `json:"side" valid:"Required"`      // LONG 或 SHORT
+	Leverage   int                 `json:"leverage" valid:"Required"`  // 槓桿倍數 1-10
+	Quantity   float64             `json:"quantity" valid:"Required"`  // 數量
+	OrderType  models.OrderType    `json:"orderType" valid:"Required"` // MARKET 或 LIMIT
+	LimitPrice *float64            `json:"limitPrice,omitempty"`       // 限價（僅限價單需要）
 }
 
 // OpenPosition 開槓桿倉位
@@ -43,7 +45,7 @@ func (c *LeverageController) OpenPosition() {
 
 	// 2. 解析請求
 	var req OpenPositionRequest
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		utils.RespondError(c.Ctx, 400, "Invalid request body")
 		return
 	}
@@ -64,8 +66,31 @@ func (c *LeverageController) OpenPosition() {
 		return
 	}
 
+	// 驗證訂單類型
+	if req.OrderType != models.OrderTypeMarket && req.OrderType != models.OrderTypeLimit {
+		utils.RespondError(c.Ctx, 400, "OrderType must be MARKET or LIMIT")
+		return
+	}
+
+	// 限價單需要限價
+	if req.OrderType == models.OrderTypeLimit && req.LimitPrice == nil {
+		utils.RespondError(c.Ctx, 400, "LimitPrice is required for limit orders")
+		return
+	}
+
+	if req.OrderType == models.OrderTypeLimit && *req.LimitPrice <= 0 {
+		utils.RespondError(c.Ctx, 400, "LimitPrice must be positive")
+		return
+	}
+
 	// 4. 開倉
-	position, err := services.OpenLeveragePosition(userId, req.Symbol, req.Side, req.Leverage, req.Quantity)
+	var position *models.LeveragePosition
+
+	if req.OrderType == models.OrderTypeMarket {
+		position, err = services.OpenLeveragePositionMarket(userId, req.Symbol, req.Side, req.Leverage, req.Quantity)
+	} else {
+		position, err = services.OpenLeveragePositionLimit(userId, req.Symbol, req.Side, req.Leverage, req.Quantity, *req.LimitPrice)
+	}
 	if err != nil {
 		utils.RespondError(c.Ctx, 400, "Failed to open position: "+err.Error())
 		return
