@@ -58,18 +58,25 @@ type WebSocketController struct {
 
 // Get() 處理 /ws 的連線請求
 func (wsc *WebSocketController) Get() {
-	// 從查詢參數或 Header 中獲取 JWT 令牌
+	// 可選的 JWT 驗證 - 如果提供令牌則使用，否則為匿名連接
+	var userId int64 = 0
+
 	token := wsc.Ctx.Request.Header.Get("Authorization")
 	if token == "" {
 		token = wsc.Ctx.Request.URL.Query().Get("token")
 	}
 
-	// 驗證 JWT
-	userId, err := utils.ValidateJWTToken(token)
-	if err != nil {
-		log.Println("WebSocket authentication failed:", err)
-		wsc.Abort("401")
-		return
+	// 如果提供了令牌，嘗試驗證
+	if token != "" {
+		validatedUserId, err := utils.ValidateJWTToken(token)
+		if err == nil {
+			userId = validatedUserId
+			log.Printf("Client connected to WebSocket with userId: %d", userId)
+		} else {
+			log.Printf("Client connected to WebSocket without valid token (anonymous)")
+		}
+	} else {
+		log.Printf("Client connected to WebSocket without token (anonymous)")
 	}
 
 	conn, err := upgrader.Upgrade(wsc.Ctx.ResponseWriter, wsc.Ctx.Request, nil)
@@ -78,7 +85,6 @@ func (wsc *WebSocketController) Get() {
 		wsc.Abort("500")
 		return
 	}
-	log.Printf("Client connected to WebSocket with userId: %d", userId)
 
 	client := &hub.Client{
 		Conn:   conn,

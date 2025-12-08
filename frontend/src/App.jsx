@@ -45,7 +45,7 @@ function CandlestickChart({ data }) {
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
   const prevDataLengthRef = useRef(0);
-  
+
   // [新增] 使用 ref 隨時記錄最新的 data，解決閉包舊資料問題
   const latestDataRef = useRef(data);
   useEffect(() => {
@@ -106,7 +106,7 @@ function CandlestickChart({ data }) {
   useEffect(() => {
     // 如果圖表還沒建立好，就先略過，反正初始化那邊(上面)會去抓最新的
     if (!seriesRef.current) return;
-    
+
     // 如果資料是空的，也沒必要畫
     if (data.length === 0) return;
 
@@ -134,8 +134,8 @@ export default function App() {
   const [symbol, setSymbol] = useState("BTCUSDT");
 
   // [修改點 1] 改為空陣列，等待 API 填入
-  const [kData, setKData] = useState([]); 
-  
+  const [kData, setKData] = useState([]);
+
   // 計算現價 (取最後一根 K 線的收盤價)
   const lastPrice = kData.length > 0 ? kData[kData.length - 1].close : 0;
 
@@ -156,10 +156,10 @@ export default function App() {
     const fetchHistory = async () => {
       try {
         setKData([]); // 切換前先清空，避免圖表殘留
-        
+
         // 呼叫後端 API (透過 Vite Proxy 轉發 /v1 -> backend:8080)
         const res = await fetch(`${API_BASE_URL}/v1/market/klines?symbol=${symbol}&interval=1m&limit=1000`);        const json = await res.json();
-        
+
         if (json.success && Array.isArray(json.data)) {
           // 確保時間由舊到新排序
           const sorted = json.data.sort((a, b) => a.time - b.time);
@@ -181,7 +181,7 @@ export default function App() {
 
     // 建立 WS 連線 (透過 Vite Proxy 轉發 /ws -> backend:8080)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`; 
+    const wsUrl = `${protocol}//localhost:8080/ws`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => console.log("WebSocket 已連線");
@@ -189,16 +189,16 @@ export default function App() {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        
+
         // 1. [除錯] 確保有收到資料
-        // console.log("收到 WS:", msg); 
+        // console.log("收到 WS:", msg);
 
         const s = symbol.toLowerCase();
-        
+
         // 2. 確保是當前幣種的 trade 數據
         if (msg.stream === `${s}@trade` && msg.data) {
           const price = parseFloat(msg.data.p);
-          const time = Math.floor(msg.data.T / 1000); 
+          const time = Math.floor(msg.data.T / 1000);
 
           // 3. [除錯] 確保有進入更新邏輯
           // console.log("更新價格:", price);
@@ -281,7 +281,7 @@ export default function App() {
       const data = await response.json();
 
       if (data.success) {
-        
+
         // localStorage.setItem("wallet",JSON.stringify(data.wallets));
         console.log("wallet : ", JSON.stringify(data.wallets));
 
@@ -299,13 +299,13 @@ export default function App() {
           }
         }
         console.log("未找到錢包");
-    
+
       } else {
         console.error("Get wallet failed");
       }
     } catch (error) {
       console.error("Wallet error:", error);
-    }  
+    }
   }
 
   useEffect(() => {
@@ -317,12 +317,12 @@ export default function App() {
     async function checkCashLoop() {
       while(cash < 0 && counter < 1000 && logged){
         // 再次檢查 logged，因為在 await 期間狀態可能變了
-        if (!logged) break; 
-        
+        if (!logged) break;
+
         checkOwn();
         handleCheckCash();
         counter ++;
-        await new Promise(resolve => setTimeout(resolve, 1000)); 
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
   }
   checkCashLoop();
@@ -332,7 +332,7 @@ export default function App() {
   // 下單
   async function submitOrder({ side, price, orderType, qtyCoin, leverage, notional, margin , lastPrice}) {
     if (cash < margin && side == "BUY") return alert("餘額不足");
-    setCash(-1);  
+    setCash(-1);
     const token = localStorage.getItem('token');
     if (!token) {
       console.error("未找到身份驗證 Token");
@@ -347,7 +347,7 @@ export default function App() {
       "leverage" : leverage,
       "orderType": orderType,
     };
-    
+
     // 如果是限價單，添加 limitPrice 屬性
     if (orderType === "LIMIT") {
       body.limitPrice = parseFloat(price);
@@ -376,7 +376,7 @@ export default function App() {
 
       if (data.success) {
         console.log("LastPrice here ", lastPrice);
-        checkOwn(lastPrice);    
+        checkOwn(lastPrice);
       } else {
         console.error("Trade Get failed");
         alert("下單失敗，請稍後再試");
@@ -384,7 +384,7 @@ export default function App() {
     } catch (error) {
       console.error("Trade error:", error);
       alert("下單失敗，請稍後再試");
-    }  
+    }
   }
 
   // 查詢持倉
@@ -414,7 +414,7 @@ export default function App() {
       const data = await response.json();
 
       if (data.success) {
-        
+
         const orders = data.positions;
         console.log("orders : ", orders);
 
@@ -429,16 +429,16 @@ export default function App() {
             }
             else{
               return {
-                id : order.id , 
-                symbol : order.symbol , 
-                side: order.side === "LONG" ? "BUY" : "SELL" , 
-                qty: order.quantity , 
-                entry: order.entryPrice, 
-                leverage: order.leverage, 
+                id : order.id ,
+                symbol : order.symbol ,
+                side: order.side === "LONG" ? "BUY" : "SELL" ,
+                qty: order.quantity ,
+                entry: order.entryPrice,
+                leverage: order.leverage,
                 // 名目價值 Notional 應該使用 entryPrice 或 markPrice，這裡使用傳入的 lastPrice (市場價)
-                notional: order.quantity * (lastPrice || order.entryPrice), 
-                margin: order.margin, 
-                closePrice : order.liquidationPrice, 
+                notional: order.quantity * (lastPrice || order.entryPrice),
+                margin: order.margin,
+                closePrice : order.liquidationPrice,
                 orderType: order.orderType || (order.type === "MARKET" ? "MARKET" : "LIMIT"), // 後端回傳的可能是 orderType 或 type
                 tp: order.tp, // 確保止盈/止損也傳入，避免 PositionsTable 報錯
                 sl: order.sl,
@@ -447,15 +447,15 @@ export default function App() {
         });
 
         newPositions = newPositions.filter(Boolean);
-        
+
         setPositions(newPositions);
-    
+
       } else {
         console.error("Search Get failed");
       }
     } catch (error) {
       console.error("Search error:", error);
-    }  
+    }
   }
 
   // 平倉
@@ -491,14 +491,14 @@ export default function App() {
 
       if (data.success) {
         alert("平倉成功");
-        checkOwn(lastPrice); 
+        checkOwn(lastPrice);
         handleCheckCash();
       } else {
         console.error("平倉失敗");
       }
     } catch (error) {
       console.error("平倉失敗 :", error);
-    }  
+    }
   }
 
   // 計算損益
@@ -525,12 +525,12 @@ export default function App() {
   function isJwtValid(token) {
     const payload = parseJwt(token);
     if (!payload) return false;
-  
+
     const now = Math.floor(Date.now() / 1000); // 現在時間，單位秒
-  
+
     if (payload.nbf && now < payload.nbf) return false; // 未到生效時間
     if (payload.exp && now >= payload.exp) return false; // 已過期
-  
+
     return true;
   }
 
@@ -588,7 +588,7 @@ export default function App() {
             <div className="chart-title">{symbol}</div>
             {/* 有資料才畫圖，避免報錯 */}
             {kData.length > 0 ? (
-                 <CandlestickChart data={kData} /> 
+                 <CandlestickChart data={kData} />
             ) : (
                 <div style={{height: 560, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666'}}>
                     正在連線至 Binance 取得數據...
@@ -637,7 +637,7 @@ function OrderBookPanel({ symbol, lastPrice, trend, orderBook }) {
         <div className="quote-price">
           現價 <span className={`price-value ${trend === "up" ? "price-up" : trend === "down" ? "price-down" : ""}`}>{fmt.format(lastPrice)}</span> USDT
         </div>
-        
+
         <div className="kv">
             <div><span>24h 漲跌</span><b className={chg >= 0 ? "up" : "down"}>{chg >= 0 ? "+" : ""}{chg.toFixed(2)}%</b></div>
             <div><span>24h 最高</span><b>{fmt.format(lastPrice * 1.02)}</b></div>
@@ -724,7 +724,7 @@ function TradePanel({ symbol, lastPrice, onSubmit }) {
 
                 <label>槓桿：{lev}x {closePrice ? <span className="lev-hint">（估平倉價：{fmt.format(closePrice)}）</span> : null}</label>
                 <input type="range" min="1" max="100" value={lev} onChange={e => setLev(Number(e.target.value))} />
-                
+
                 <div className="tpsl-row">
                     <label className="inline"><input type="checkbox" checked={tpOn} onChange={e => setTpOn(e.target.checked)} /> TP</label>
                     <input disabled={!tpOn} value={tp} onChange={e => setTp(e.target.value)} placeholder="TP" />
