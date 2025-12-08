@@ -55,12 +55,12 @@ const Register = ({ changePage }) => {
       console.log(data)
 
       if (data.success) {
-        console.log("Registration Successful");
-        alert("Registration Successful");
+        console.log("註冊成功");
+        alert("註冊成功");
         changePage("login")
       } else {
-        console.error("Registration failed");
-        alert("Registration failed");
+        console.error("註冊失敗");
+        alert("註冊失敗，請稍後再試");
       }
     } catch (error) {
       console.error("Registration failed with error");

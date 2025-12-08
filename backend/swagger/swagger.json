@@ -231,6 +231,223 @@
                 }
             }
         },
+        "/leverage/position/open": {
+            "post": {
+                "tags": [
+                    "leverage"
+                ],
+                "description": "開設槓桿倉位（做多/做空）\n\u003cbr\u003e",
+                "operationId": "LeverageController.OpenPosition",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "開倉資訊",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/OpenPositionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.LeveragePosition"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/leverage/position/{id}": {
+            "get": {
+                "tags": [
+                    "leverage"
+                ],
+                "description": "查詢單個倉位的詳細資訊\n\u003cbr\u003e",
+                "operationId": "LeverageController.GetPositionDetail",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "description": "倉位 ID",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.LeveragePosition"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Position not found"
+                    }
+                }
+            }
+        },
+        "/leverage/position/{id}/close": {
+            "post": {
+                "tags": [
+                    "leverage"
+                ],
+                "description": "平倉（關閉槓桿倉位）\n\u003cbr\u003e",
+                "operationId": "LeverageController.ClosePosition",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "description": "倉位 ID",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.LeveragePosition"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Position not found"
+                    }
+                }
+            }
+        },
+        "/leverage/positions/history": {
+            "get": {
+                "tags": [
+                    "leverage"
+                ],
+                "description": "查詢使用者的倉位歷史（包含已平倉）\n\u003cbr\u003e",
+                "operationId": "LeverageController.GetPositionHistory",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "in": "query",
+                        "name": "symbol",
+                        "description": "交易對篩選",
+                        "type": "string"
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "description": "每頁數量（預設20）",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "description": "偏移量（預設0）",
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.LeveragePosition"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/leverage/positions/open": {
+            "get": {
+                "tags": [
+                    "leverage"
+                ],
+                "description": "查詢使用者的所有持倉\n\u003cbr\u003e",
+                "operationId": "LeverageController.GetOpenPositions",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "Authorization",
+                        "description": "Bearer {token}",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.LeveragePosition"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/market/klines": {
             "get": {
                 "tags": [
@@ -709,6 +926,10 @@
         }
     },
     "definitions": {
+        "OpenPositionRequest": {
+            "title": "OpenPositionRequest",
+            "type": "object"
+        },
         "PlaceOrderRequest": {
             "title": "PlaceOrderRequest",
             "type": "object"
@@ -735,6 +956,79 @@
                 },
                 "token": {
                     "type": "string"
+                }
+            }
+        },
+        "models.LeveragePosition": {
+            "title": "LeveragePosition",
+            "type": "object",
+            "properties": {
+                "closedAt": {
+                    "type": "string",
+                    "format": "datetime"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "datetime"
+                },
+                "entryPrice": {
+                    "description": "開倉價格",
+                    "type": "number",
+                    "format": "double"
+                },
+                "exitPrice": {
+                    "description": "平倉價格",
+                    "type": "number",
+                    "format": "double"
+                },
+                "id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "leverage": {
+                    "description": "槓桿倍數：1-10",
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "liquidationPrice": {
+                    "description": "爆倉價格",
+                    "type": "number",
+                    "format": "double"
+                },
+                "margin": {
+                    "description": "保證金（USDT）",
+                    "type": "number",
+                    "format": "double"
+                },
+                "quantity": {
+                    "description": "持倉數量",
+                    "type": "number",
+                    "format": "double"
+                },
+                "realizedPnl": {
+                    "description": "已實現盈虧",
+                    "type": "number",
+                    "format": "double"
+                },
+                "side": {
+                    "$ref": "#/definitions/models.PositionSide",
+                    "description": "LONG or SHORT"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.PositionStatus"
+                },
+                "symbol": {
+                    "description": "交易對：BTCUSDT, ETHUSDT, SOLUSDT",
+                    "type": "string"
+                },
+                "unrealizedPnl": {
+                    "description": "未實現盈虧",
+                    "type": "number",
+                    "format": "double"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "format": "datetime"
                 }
             }
         },
@@ -835,6 +1129,25 @@
             ],
             "example": "MARKET"
         },
+        "models.PositionSide": {
+            "title": "PositionSide",
+            "type": "string",
+            "enum": [
+                "PositionSideLong = \"LONG\"",
+                "PositionSideShort = \"SHORT\""
+            ],
+            "example": "LONG"
+        },
+        "models.PositionStatus": {
+            "title": "PositionStatus",
+            "type": "string",
+            "enum": [
+                "PositionStatusOpen = \"OPEN\"",
+                "PositionStatusClosed = \"CLOSED\"",
+                "PositionStatusLiquidated = \"LIQUIDATED\""
+            ],
+            "example": "OPEN"
+        },
         "models.Registration": {
             "title": "Registration",
             "type": "object",
@@ -896,7 +1209,10 @@
                 "TransactionTypeBuy = \"BUY\"",
                 "TransactionTypeSell = \"SELL\"",
                 "TransactionTypeDeposit = \"DEPOSIT\"",
-                "TransactionTypeWithdraw = \"WITHDRAW\""
+                "TransactionTypeWithdraw = \"WITHDRAW\"",
+                "TransactionTypeMarginDeposit = \"MARGIN_DEPOSIT\"",
+                "TransactionTypeMarginWithdraw = \"MARGIN_WITHDRAW\"",
+                "TransactionTypeLiquidation = \"LIQUIDATION\""
             ],
             "example": "BUY"
         },
