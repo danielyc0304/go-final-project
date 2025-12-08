@@ -30,6 +30,9 @@ const Welcome = ( {setLogged} ) => {
         if(prevPath != ""){
             setPage(prevPath);
         }
+
+        // localStorage.removeItem("token"); // 清除 token
+        // localStorage.removeItem("wallet"); // 清除 wallet
     }, []); // 依賴項
 
 

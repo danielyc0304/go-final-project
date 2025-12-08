@@ -61,6 +61,51 @@ func init() {
             Filters: nil,
             Params: nil})
 
+    beego.GlobalControllerRouter["backend/controllers:LeverageController"] = append(beego.GlobalControllerRouter["backend/controllers:LeverageController"],
+        beego.ControllerComments{
+            Method: "GetPositionDetail",
+            Router: `/position/:id`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:LeverageController"] = append(beego.GlobalControllerRouter["backend/controllers:LeverageController"],
+        beego.ControllerComments{
+            Method: "ClosePosition",
+            Router: `/position/:id/close`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:LeverageController"] = append(beego.GlobalControllerRouter["backend/controllers:LeverageController"],
+        beego.ControllerComments{
+            Method: "OpenPosition",
+            Router: `/position/open`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:LeverageController"] = append(beego.GlobalControllerRouter["backend/controllers:LeverageController"],
+        beego.ControllerComments{
+            Method: "GetPositionHistory",
+            Router: `/positions/history`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["backend/controllers:LeverageController"] = append(beego.GlobalControllerRouter["backend/controllers:LeverageController"],
+        beego.ControllerComments{
+            Method: "GetOpenPositions",
+            Router: `/positions/open`,
+            AllowHTTPMethods: []string{"get"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
     beego.GlobalControllerRouter["backend/controllers:MarketController"] = append(beego.GlobalControllerRouter["backend/controllers:MarketController"],
         beego.ControllerComments{
             Method: "GetKLines",

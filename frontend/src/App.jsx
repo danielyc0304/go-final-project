@@ -257,14 +257,13 @@ export default function App() {
   const [positions, setPositions] = useState([]);
   const [realized, setRealized] = useState(0);
 
-  async function handleCheckCash(){
+  async function handleCheckCash(wallet){
     const token = localStorage.getItem('token');
 
     if (!token) {
       console.error("未找到身份驗證 Token");
       return;
     }
-
     try {
       const response = await fetch("http://localhost:8080/v1/trading/wallets", {
         method: "GET",
@@ -283,8 +282,24 @@ export default function App() {
 
       if (data.success) {
         
-        localStorage.setItem("wallet",JSON.stringify(data.wallets));
-        console.log("wallet : ", data.wallets);
+        // localStorage.setItem("wallet",JSON.stringify(data.wallets));
+        console.log("wallet : ", JSON.stringify(data.wallets));
+
+        const wallet = JSON.parse(JSON.stringify(data.wallets));
+        console.log("wallet from localStorage: ", wallet);
+        if (wallet && Array.isArray(wallet)) {
+          // 找到 USDT 的錢包
+          const usdtWallet = wallet.find(wallet => wallet.symbol === "USDT");
+          if (usdtWallet) {
+            console.log("USDT 錢包餘額:", usdtWallet.balance);
+            setCash(usdtWallet.balance); // 更新 cash 狀態
+            return;
+          } else {
+            console.log("未找到 USDT 錢包");
+          }
+        }
+        console.log("未找到錢包");
+    
       } else {
         console.error("Get wallet failed");
       }
@@ -294,47 +309,39 @@ export default function App() {
   }
 
   useEffect(() => {
+    checkOwn();
+    handleCheckCash();
+
     let counter = 0;
     async function checkCashLoop() {
-
-    while(cash < 0 && counter < 1000){
-      handleCheckCash();
-      const wallet = JSON.parse(localStorage.getItem("wallet"));
-      // console.log("wallet from localStorage: ", wallet);
-      if (wallet && Array.isArray(wallet)) {
-        // 找到 USDT 的錢包
-        const usdtWallet = wallet.find(wallet => wallet.symbol === "USDT");
-        if (usdtWallet) {
-          console.log("USDT 錢包餘額:", usdtWallet.balance);
-          setCash(usdtWallet.balance); // 更新 cash 狀態
-        } else {
-          console.log("未找到 USDT 錢包");
-        }
+      while(cash < 0 && counter < 1000 && logged){
+        checkOwn();
+        handleCheckCash();
+        counter ++;
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒鐘
       }
-      console.log("未找到錢包");
-      counter ++;
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒鐘
-    }
   }
   checkCashLoop();
-  }, [cash]);
+  }, [cash,logged]);
 
 
   // 下單
-  async function submitOrder({ side, price, orderType, qtyCoin, leverage, notional, margin }) {
+  async function submitOrder({ side, price, orderType, qtyCoin, leverage, notional, margin , lastPrice}) {
     if (cash < margin && side == "BUY") return alert("餘額不足");
     setCash(-1);  
     const token = localStorage.getItem('token');
     if (!token) {
       console.error("未找到身份驗證 Token");
+      alert("未找到身份驗證 Token，請重新登入");
       return;
     }
 
     let body = {
       "symbol" : symbol,
-      "type" : orderType,
-      "side" : side,
+      "side" : side==="BUY" ? "LONG" : "SHORT",
       "quantity" : parseFloat(qtyCoin),
+      "leverage" : leverage,
+      "orderType": orderType,
     };
     
     // 如果是限價單，添加 limitPrice 屬性
@@ -343,11 +350,11 @@ export default function App() {
     }
 
 
-    console.log(body);
+    console.log(JSON.stringify(body));
 
 
     try {
-      const response = await fetch("http://localhost:8080/v1/trading/order", {
+      const response = await fetch("http://localhost:8080/v1/leverage/position/open", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -358,6 +365,45 @@ export default function App() {
       });
 
       if (!response.ok) {
+        throw new Error(response);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("LastPrice here ", lastPrice);
+        checkOwn(lastPrice);    
+      } else {
+        console.error("Trade Get failed");
+        alert("下單失敗，請稍後再試");
+      }
+    } catch (error) {
+      console.error("Trade error:", error);
+      alert("下單失敗，請稍後再試");
+    }  
+  }
+
+  // 查詢持倉
+  async function checkOwn(lastPrice) {
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error("未找到身份驗證 Token");
+      alert("未找到身份驗證 Token，請重新登入");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:8080/v1/leverage/positions/history", {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
         throw new Error("Network response was not ok");
       }
 
@@ -365,40 +411,90 @@ export default function App() {
 
       if (data.success) {
         
-        const order = data.order;
-        console.log("order : ", data.order);
+        const orders = data.positions;
+        console.log("orders : ", orders);
 
-        if(order.type == "MARKET"){
-          const leverage = 10;
-          const closePrice = order.side === "BUY" ? order.price * (1 - 1 / leverage) : order.price * (1 + 1 / leverage);
-          setPositions(ps => [{
-          id : order.id , symbol : order.symbol , side: order.side , qty: order.quantity , entry: order.price, leverage: leverage, notional: order.price, margin: order.price*leverage, closePrice, orderType: order.type
-          }, ...ps]);
-        }
-        else{
-          const leverage = 10;
-          const closePrice = order.side === "BUY" ? order.price * (1 - 1 / leverage) : order.price * (1 + 1 / leverage);
-          setPositions(ps => [{
-          id : order.id , symbol : order.symbol , side: order.side , qty: order.quantity , entry: order.limitPrice, leverage: leverage, notional: order.limitPrice, margin: order.limitPrice, closePrice, orderType: order.type
-          }, ...ps]);
-        }
+        // const ordersMap = orders.map((order) => {
+          // const closePrice = order.side === "LONG"
+          // ? order.entryPrice * (1 - 1 / order.leverage)
+          // : order.entryPrice * (1 + 1 / order.leverage);
+          let newPositions = orders.map((order) => {
+            if(order.status !== "OPEN"){
+              setRealized(prev => prev + order.realizedPnl);
+              return null;
+            }
+            else{
+              return {
+                id : order.id , 
+                symbol : order.symbol , 
+                side: order.side === "LONG" ? "BUY" : "SELL" , 
+                qty: order.quantity , 
+                entry: order.entryPrice, 
+                leverage: order.leverage, 
+                // 名目價值 Notional 應該使用 entryPrice 或 markPrice，這裡使用傳入的 lastPrice (市場價)
+                notional: order.quantity * (lastPrice || order.entryPrice), 
+                margin: order.margin, 
+                closePrice : order.liquidationPrice, 
+                orderType: order.orderType || (order.type === "MARKET" ? "MARKET" : "LIMIT"), // 後端回傳的可能是 orderType 或 type
+                tp: order.tp, // 確保止盈/止損也傳入，避免 PositionsTable 報錯
+                sl: order.sl,
+            };
+          }
+        });
+
+        newPositions = newPositions.filter(Boolean);
+        
+        setPositions(newPositions);
     
       } else {
-        console.error("Get wallet failed");
+        console.error("Search Get failed");
       }
     } catch (error) {
-      console.error("Wallet error:", error);
+      console.error("Search error:", error);
     }  
   }
 
   // 平倉
-  function closePosition(pid) {
+  async function closePosition(pid) {
     const p = positions.find(x => x.id === pid);
     if (!p) return;
-    const pnl = (lastPrice - p.entry) * p.qty * (p.side === "BUY" ? 1 : -1);
-    setCash(c => c + p.margin + pnl);
-    setRealized(r => r + pnl);
-    setPositions(ps => ps.filter(x => x.id !== pid));
+
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      console.error("未找到身份驗證 Token");
+      alert("未找到身份驗證 Token，請重新登入");
+      return;
+    }
+
+    const apiUrl = `http://localhost:8080/v1/leverage/position/${p.id}/close`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("平倉成功");
+        checkOwn(lastPrice); 
+        handleCheckCash();
+      } else {
+        console.error("平倉失敗");
+      }
+    } catch (error) {
+      console.error("平倉失敗 :", error);
+    }  
   }
 
   // 計算損益
@@ -449,6 +545,7 @@ export default function App() {
 
   function handleLogout() {
     localStorage.removeItem("token"); // 清除 token
+    localStorage.removeItem("wallet"); // 清除 wallet
     setLogged(false); // 更新 logged 狀態
     console.log("已登出");
   }
@@ -470,7 +567,7 @@ export default function App() {
 
       <main className="content">
         <div className="search-wrap">
-          <input className="search" value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋 (例如 BTC, ETH)..." />
+          <input className="search" value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋 (例如 BTC, ETH, SOL)..." />
           {suggestions.length > 0 && (
             <div className="suggest">
               {suggestions.map(s => (
@@ -613,7 +710,7 @@ function TradePanel({ symbol, lastPrice, onSubmit }) {
                 </div>
 
                 <label>價格 (USDT)</label>
-                <input value={orderType === "MARKET" ? "" : price} onChange={e => setPrice(e.target.value)} disabled={orderType === "MARKET"} placeholder={orderType === "MARKET" ? `${fmt.format(lastPrice)}（市價）` : `${fmt.format(lastPrice)}`} />
+                <input value={orderType === "MARKET" ? "" : price} onChange={e => setPrice(e.target.value)} disabled={orderType === "MARKET"} placeholder={orderType === "MARKET" ? `${fmt.format(lastPrice)}（市價）` : ""} />
 
                 <div className="qty-row">
                     <label>{inputMode === "COIN" ? `數量 (${symbol.replace("USDT", "")})` : "保證金 (USDT)"}</label>
@@ -638,7 +735,7 @@ function TradePanel({ symbol, lastPrice, onSubmit }) {
 
                 <button className={`primary ${side === "SELL" ? "warn" : ""}`} onClick={() => {
                     if (!(basePrice > 0 && coinQty > 0 && notional > 0 && margin > 0)) return alert("請輸入有效價格、槓桿與數量");
-                    onSubmit({ side, price: basePrice, orderType, qtyCoin: coinQty, leverage: lev, tpOn, tp, slOn, sl, notional, margin });
+                    onSubmit({ side, price: basePrice, orderType, qtyCoin: coinQty, leverage: lev, tpOn, tp, slOn, sl, notional, margin, lastPrice });
                 }}>
                     送出{side === "BUY" ? "買進" : "賣出"}
                 </button>
@@ -665,7 +762,7 @@ function PositionsTable({ positions, markPrice, closePosition, totalPositionValu
                         return (
                             <tr key={p.id}>
                                 <td>{p.symbol} <span className={p.side === "BUY" ? "up" : "down"}>{p.side === "BUY" ? "買進" : "賣出"}</span> {p.leverage}x <span className="order-type-tag">{p.orderType === "MARKET" ? "市價" : "限價"}</span></td>
-                                <td>{fmt4.format(p.qty)}</td><td>{fmt.format(p.notional)}</td><td>{fmt.format(p.margin)}</td>
+                                <td>{fmt4.format(p.qty)}</td><td>{fmt.format(p.qty*p.leverage*markPrice)}</td><td>{fmt.format(p.margin)}</td>
                                 <td>{fmt.format(p.entry)}</td><td>{fmt.format(markPrice)}</td><td>{fmt.format(p.closePrice)}</td>
                                 <td className={pnl >= 0 ? "up" : "down"}>{fmt.format(pnl)}</td>
                                 <td>{p.tp ? fmt.format(p.tp) : "-"}</td><td>{p.sl ? fmt.format(p.sl) : "-"}</td>
