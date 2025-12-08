@@ -62,7 +62,8 @@ func CreateWallet(userId int64, symbol string, initialBalance float64) (*Wallet,
 		One(existing)
 
 	if err == nil {
-		return nil, errors.New("wallet already exists")
+		// 錢包已存在，直接返回而不報錯
+		return existing, nil
 	}
 
 	wallet := &Wallet{
@@ -122,7 +123,7 @@ func InitializeDefaultWallets(userId int64) error {
 
 	for _, symbol := range symbols {
 		_, err := CreateWallet(userId, symbol, initialBalances[symbol])
-		if err != nil && err.Error() != "wallet already exists" {
+		if err != nil {
 			return fmt.Errorf("failed to create wallet for %s: %v", symbol, err)
 		}
 	}

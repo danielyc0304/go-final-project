@@ -29,6 +29,12 @@ func Registration(m models.Registration) (id int64, err error) {
 	if id, err = models.AddUser(&user); err != nil {
 		return
 	}
+
+	// 為新用戶初始化默認錢包
+	if err = models.InitializeDefaultWallets(id); err != nil {
+		return
+	}
+
 	return
 }
 
