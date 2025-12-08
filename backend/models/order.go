@@ -35,19 +35,22 @@ const (
 
 // Order 訂單
 type Order struct {
-	Id          int64       `orm:"auto" json:"id"`
-	User        *User       `orm:"rel(fk)" json:"-"`
-	Symbol      string      `orm:"size(20)" json:"symbol"`                                  // 交易對：BTCUSDT, ETHUSDT, SOLUSDT
-	Type        OrderType   `orm:"size(10)" json:"type"`                                    // MARKET or LIMIT
-	Side        OrderSide   `orm:"size(10)" json:"side"`                                    // BUY or SELL
-	Quantity    float64     `orm:"digits(20);decimals(8)" json:"quantity"`                  // 交易數量
-	LimitPrice  float64     `orm:"digits(20);decimals(8);null" json:"limitPrice,omitempty"` // 限價（僅限價單使用）
-	Price       float64     `orm:"digits(20);decimals(8)" json:"price"`                     // 成交價格
-	TotalAmount float64     `orm:"digits(20);decimals(8)" json:"totalAmount"`               // 總金額
-	Status      OrderStatus `orm:"size(20)" json:"status"`
-	ErrorMsg    string      `orm:"size(500);null" json:"errorMsg,omitempty"`
-	CreatedAt   time.Time   `orm:"auto_now_add;type(datetime)" json:"createdAt"`
-	UpdatedAt   time.Time   `orm:"auto_now;type(datetime)" json:"updatedAt"`
+	Id              int64       `orm:"auto" json:"id"`
+	User            *User       `orm:"rel(fk)" json:"-"`
+	Symbol          string      `orm:"size(20)" json:"symbol"`                                  // 交易對：BTCUSDT, ETHUSDT, SOLUSDT
+	Type            OrderType   `orm:"size(10)" json:"type"`                                    // MARKET or LIMIT
+	Side            OrderSide   `orm:"size(10)" json:"side"`                                    // BUY or SELL
+	Quantity        float64     `orm:"digits(20);decimals(8)" json:"quantity"`                  // 交易數量
+	LimitPrice      float64     `orm:"digits(20);decimals(8);null" json:"limitPrice,omitempty"` // 限價（僅限價單使用）
+	Price           float64     `orm:"digits(20);decimals(8)" json:"price"`                     // 成交價格
+	TotalAmount     float64     `orm:"digits(20);decimals(8)" json:"totalAmount"`               // 總金額
+	IsLeverageOrder bool        `orm:"default(false)" json:"isLeverageOrder"`                   // 是否是槓桿訂單
+	Leverage        int         `orm:"default(1);null" json:"leverage,omitempty"`               // 槓桿倍數（僅槓桿訂單使用）
+	PositionSideStr string      `orm:"size(10);null" json:"positionSide,omitempty"`             // 倉位方向：LONG or SHORT（僅槓桿訂單使用）
+	Status          OrderStatus `orm:"size(20)" json:"status"`
+	ErrorMsg        string      `orm:"size(500);null" json:"errorMsg,omitempty"`
+	CreatedAt       time.Time   `orm:"auto_now_add;type(datetime)" json:"createdAt"`
+	UpdatedAt       time.Time   `orm:"auto_now;type(datetime)" json:"updatedAt"`
 }
 
 func init() {
@@ -65,6 +68,34 @@ func CreateOrder(userId int64, symbol string, orderType OrderType, side OrderSid
 		Side:     side,
 		Quantity: quantity,
 		Status:   OrderStatusPending,
+	}
+
+	if limitPrice != nil {
+		order.LimitPrice = *limitPrice
+	}
+
+	id, err := o.Insert(order)
+	if err != nil {
+		return nil, err
+	}
+	order.Id = id
+	return order, nil
+}
+
+// CreateLeverageOrder 建立槓桿訂單
+func CreateLeverageOrder(userId int64, symbol string, orderType OrderType, side OrderSide, quantity float64, limitPrice *float64, leverage int, positionSide PositionSide) (*Order, error) {
+	o := orm.NewOrm()
+
+	order := &Order{
+		User:            &User{Id: userId},
+		Symbol:          symbol,
+		Type:            orderType,
+		Side:            side,
+		Quantity:        quantity,
+		Status:          OrderStatusPending,
+		IsLeverageOrder: true,
+		Leverage:        leverage,
+		PositionSideStr: string(positionSide),
 	}
 
 	if limitPrice != nil {

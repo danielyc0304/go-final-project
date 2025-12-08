@@ -1059,10 +1059,23 @@
                     "type": "integer",
                     "format": "int64"
                 },
+                "isLeverageOrder": {
+                    "description": "是否是槓桿訂單",
+                    "type": "boolean"
+                },
+                "leverage": {
+                    "description": "槓桿倍數（僅槓桿訂單使用）",
+                    "type": "integer",
+                    "format": "int64"
+                },
                 "limitPrice": {
                     "description": "限價（僅限價單使用）",
                     "type": "number",
                     "format": "double"
+                },
+                "positionSide": {
+                    "description": "倉位方向：LONG or SHORT（僅槓桿訂單使用）",
+                    "type": "string"
                 },
                 "price": {
                     "description": "成交價格",
