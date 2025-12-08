@@ -191,7 +191,9 @@ export default function App() {
         const msg = JSON.parse(event.data);
 
         // 1. [除錯] 確保有收到資料
-        // console.log("收到 WS:", msg);
+        // console.log("Length:", Object.keys(msg.data).length);
+        if(Object.keys(msg.data).length != 9)
+          console.log("收到 WS:", msg);
 
         const s = symbol.toLowerCase();
 
@@ -283,17 +285,17 @@ export default function App() {
       if (data.success) {
 
         // localStorage.setItem("wallet",JSON.stringify(data.wallets));
-        console.log("wallet : ", JSON.stringify(data.wallets));
+        // console.log("wallet : ", JSON.stringify(data.wallets));
 
         const wallet = JSON.parse(JSON.stringify(data.wallets));
-        console.log("wallet from localStorage: ", wallet);
+        // console.log("wallet from localStorage: ", wallet);
         if (wallet && Array.isArray(wallet)) {
           // 找到 USDT 的錢包
           const usdtWallet = wallet.find(wallet => wallet.symbol === "USDT");
           if (usdtWallet) {
             console.log("USDT 錢包餘額:", usdtWallet.balance);
             setCash(usdtWallet.balance); // 更新 cash 狀態
-            return;
+            return true;
           } else {
             console.log("未找到 USDT 錢包");
           }
@@ -306,12 +308,15 @@ export default function App() {
     } catch (error) {
       console.error("Wallet error:", error);
     }
+
+    return false;
   }
 
   useEffect(() => {
     if (!logged) return;
     checkOwn();
-    handleCheckCash();
+    if(handleCheckCash())
+      return;
 
     let counter = 0;
     async function checkCashLoop() {
@@ -319,13 +324,15 @@ export default function App() {
         // 再次檢查 logged，因為在 await 期間狀態可能變了
         if (!logged) break;
 
-        checkOwn();
-        handleCheckCash();
+        if(handleCheckCash())
+          return;
         counter ++;
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
-  }
+    }
   checkCashLoop();
+  checkOwn();
+
   }, [cash,logged]);
 
 
