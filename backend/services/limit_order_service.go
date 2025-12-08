@@ -191,20 +191,100 @@ func (m *LimitOrderMatcher) executeLimitOrder(order *models.Order, currentPrice 
 	orm.NewOrm().LoadRelated(fullOrder, "User")
 	userId := fullOrder.User.Id
 
-	if order.Side == models.OrderSideBuy {
-		// 買入：用 USDT 買入 base 幣
-		totalAmount, actualQuantity, err = executeBuyOrder(to, userId, base, quote, order.Quantity, currentPrice, order.Id)
-	} else {
-		// 賣出：賣出 base 幣換 USDT
-		totalAmount, actualQuantity, err = executeSellOrder(to, userId, base, quote, order.Quantity, currentPrice, order.Id)
-	}
+	// 區分槓桿訂單和現貨訂單的執行邏輯
+	if fullOrder.IsLeverageOrder {
+		// 槓桿訂單：不扣除完整 USDT，只更新幣種錢包
+		actualQuantity = fullOrder.Quantity
+		totalAmount = fullOrder.Quantity * fullOrder.LimitPrice
 
-	if err != nil {
-		return err
+		if fullOrder.Side == models.OrderSideBuy {
+			// 買入：增加 base 幣錢包，不扣除 USDT
+			baseWallet := &models.Wallet{}
+			err = to.QueryTable(new(models.Wallet)).
+				Filter("User__Id", userId).
+				Filter("Symbol", base).
+				One(baseWallet)
+
+			if err == orm.ErrNoRows {
+				// 錢包不存在，建立一個
+				baseWallet = &models.Wallet{
+					User:    &models.User{Id: userId},
+					Symbol:  base,
+					Balance: 0,
+					Locked:  0,
+				}
+				_, err = to.Insert(baseWallet)
+				if err != nil {
+					return fmt.Errorf("failed to create %s wallet: %v", base, err)
+				}
+			} else if err != nil {
+				return fmt.Errorf("failed to get %s wallet: %v", base, err)
+			}
+
+			// 增加 base 幣餘額
+			baseWallet.Balance += actualQuantity
+			_, err = to.Update(baseWallet, "Balance")
+			if err != nil {
+				return fmt.Errorf("failed to update %s balance: %v", base, err)
+			}
+		} else {
+			// 賣出：減少 base 幣錢包，增加 USDT
+			baseWallet := &models.Wallet{}
+			err = to.QueryTable(new(models.Wallet)).
+				Filter("User__Id", userId).
+				Filter("Symbol", base).
+				One(baseWallet)
+
+			if err != nil {
+				return fmt.Errorf("failed to get %s wallet: %v", base, err)
+			}
+
+			if baseWallet.GetAvailableBalance() < actualQuantity {
+				return errors.New("insufficient coin balance")
+			}
+
+			// 減少 base 幣餘額
+			baseWallet.Balance -= actualQuantity
+			_, err = to.Update(baseWallet, "Balance")
+			if err != nil {
+				return fmt.Errorf("failed to update %s balance: %v", base, err)
+			}
+
+			// 增加 USDT 錢包（不扣除保證金）
+			quoteWallet := &models.Wallet{}
+			err = to.QueryTable(new(models.Wallet)).
+				Filter("User__Id", userId).
+				Filter("Symbol", quote).
+				One(quoteWallet)
+
+			if err != nil {
+				return fmt.Errorf("failed to get %s wallet: %v", quote, err)
+			}
+
+			quoteWallet.Balance += totalAmount
+			_, err = to.Update(quoteWallet, "Balance")
+			if err != nil {
+				return fmt.Errorf("failed to update %s balance: %v", quote, err)
+			}
+		}
+	} else {
+		// 現貨訂單：正常執行，扣除完整 USDT
+		if fullOrder.Side == models.OrderSideBuy {
+			// 買入：計算需要的 USDT 金額 = 幣種數量 × 限價
+			usdtAmount := fullOrder.Quantity * fullOrder.LimitPrice
+			totalAmount, actualQuantity, err = executeBuyOrder(to, userId, base, quote, usdtAmount, fullOrder.LimitPrice, fullOrder.Id)
+		} else {
+			// 賣出：直接使用幣種數量
+			totalAmount, actualQuantity, err = executeSellOrder(to, userId, base, quote, fullOrder.Quantity, fullOrder.LimitPrice, fullOrder.Id)
+		}
+
+		if err != nil {
+			return err
+		}
 	}
 
 	// 更新訂單狀態
-	err = models.UpdateOrderStatus(to, order.Id, models.OrderStatusCompleted, currentPrice, totalAmount, "")
+	err = models.UpdateOrderStatus(to, fullOrder.Id, models.OrderStatusCompleted, currentPrice, totalAmount, "")
 	if err != nil {
 		return fmt.Errorf("failed to update order: %v", err)
 	}
@@ -222,15 +302,72 @@ func (m *LimitOrderMatcher) executeLimitOrder(order *models.Order, currentPrice 
 
 	// 發送 WebSocket 通知給用戶
 	message := models.NewLimitOrderFilledMessage(
-		order.Id,
-		order.Symbol,
-		order.Side,
-		order.LimitPrice,
+		fullOrder.Id,
+		fullOrder.Symbol,
+		fullOrder.Side,
+		fullOrder.LimitPrice,
 		currentPrice,
 		actualQuantity,
 		totalAmount,
 	)
 	hub.GlobalHub.BroadcastToUser(userId, message.ToJSON())
+
+	// 如果這是一個槓桿訂單，建立槓桿倉位
+	if fullOrder.IsLeverageOrder {
+		positionSide := models.PositionSide(fullOrder.PositionSideStr)
+		// fullOrder.Quantity 代表想要購買的幣種數量
+		// 保證金 = (數量 × 限價) / 槓桿倍數
+		margin := (fullOrder.Quantity * fullOrder.LimitPrice) / float64(fullOrder.Leverage)
+
+		// 計算爆倉價格
+		var liquidationPrice float64
+		liquidationRatio := 0.9 / float64(fullOrder.Leverage)
+		if positionSide == models.PositionSideLong {
+			liquidationPrice = fullOrder.LimitPrice * (1 - liquidationRatio)
+		} else {
+			liquidationPrice = fullOrder.LimitPrice * (1 + liquidationRatio)
+		}
+
+		position := &models.LeveragePosition{
+			User:             &models.User{Id: userId},
+			Order:            fullOrder,
+			Symbol:           fullOrder.Symbol,
+			Side:             positionSide,
+			Leverage:         fullOrder.Leverage,
+			EntryPrice:       fullOrder.LimitPrice,
+			Quantity:         actualQuantity, // 實際購買的幣種數量
+			Margin:           margin,
+			LiquidationPrice: liquidationPrice,
+			UnrealizedPnL:    0,
+			RealizedPnL:      0,
+			Status:           models.PositionStatusOpen,
+		}
+
+		// 保存槓桿倉位
+		o := orm.NewOrm()
+		_, err := o.Insert(position)
+		if err != nil {
+			log.Printf("Warning: Failed to create leverage position for order #%d: %v", fullOrder.Id, err)
+		} else {
+			log.Printf("Leverage position #%d created: User=%d, Symbol=%s, Side=%s, Leverage=%dx, Quantity=%.8f, EntryPrice=%.2f, Margin=%.2f",
+				position.Id, userId, fullOrder.Symbol, positionSide, fullOrder.Leverage, fullOrder.Quantity, fullOrder.LimitPrice, margin)
+
+			// 從 USDT 錢包扣除保證金
+			wallet, err := models.GetWalletByUserAndSymbol(userId, "USDT")
+			if err == nil {
+				wallet.Balance -= margin
+				wallet.Locked += margin
+				_, err = o.Update(wallet, "Balance", "Locked")
+				if err != nil {
+					log.Printf("Warning: Failed to deduct margin from user %d: %v", userId, err)
+				}
+			}
+
+			// 發送槓桿倉位開倉通知給用戶
+			posMessage := models.NewLeveragePositionOpenedMessage(position)
+			hub.GlobalHub.BroadcastToUser(userId, posMessage.ToJSON())
+		}
+	}
 
 	return nil
 }
@@ -279,51 +416,18 @@ func PlaceLimitOrder(userId int64, symbol string, side models.OrderSide, quantit
 		return nil, fmt.Errorf("failed to create order: %v", err)
 	}
 
-	// 3. 獲取當前市價並檢查是否應該立即成交
-	currentPrice, ok := GlobalPriceCache.GetPrice(symbol)
+	// 3. 獲取當前市價（用於日誌記錄）
+	currentPrice, _ := GlobalPriceCache.GetPrice(symbol)
 
-	// 判斷是否應該立即執行訂單
-	shouldExecuteImmediately := false
-	if ok {
-		if side == models.OrderSideBuy {
-			// 買入限價單：當市價 <= 限價時可以立即成交
-			if currentPrice <= limitPrice {
-				shouldExecuteImmediately = true
-			}
-		} else {
-			// 賣出限價單：當市價 >= 限價時可以立即成交
-			if currentPrice >= limitPrice {
-				shouldExecuteImmediately = true
-			}
-		}
-	}
+	// 4. 所有限價單都直接加入 matcher，讓 matcher 統一管理執行時機
+	// 不在下單時檢查是否應該立即成交，因為：
+	// 1. 避免並發問題（多個地方同時檢查和執行）
+	// 2. matcher 會定期檢查所有待處理的限價單，確保不會遺漏
+	// 3. 這樣能保證限價單的執行順序和一致性
 
-	// 4a. 如果應該立即成交，執行市價成交邏輯
-	if shouldExecuteImmediately {
-		log.Printf("Limit order #%d will be executed immediately: %s %s at %.2f (current price: %.2f)",
-			order.Id, side, symbol, limitPrice, currentPrice)
-
-		// 執行訂單（使用當前市價，但不超過限價）
-		executionPrice := currentPrice
-		if side == models.OrderSideBuy && executionPrice > limitPrice {
-			executionPrice = limitPrice
-		} else if side == models.OrderSideSell && executionPrice < limitPrice {
-			executionPrice = limitPrice
-		}
-
-		err := GlobalLimitOrderMatcher.ExecuteLimitOrder(order, executionPrice)
-		if err != nil {
-			log.Printf("Failed to execute limit order #%d immediately: %v", order.Id, err)
-			// 如果立即執行失敗，改為加入待處理列表，稍後重試
-			GlobalLimitOrderMatcher.AddOrder(order)
-		}
-		// 成功執行，無需加入待處理列表
-	} else {
-		// 4b. 如果不應該立即成交，加入撮合器監控
-		log.Printf("Limit order #%d added to matcher: %s %s at %.2f (current price: %.2f)",
-			order.Id, side, symbol, limitPrice, currentPrice)
-		GlobalLimitOrderMatcher.AddOrder(order)
-	}
+	log.Printf("Limit order #%d added to matcher: %s %s at %.2f (current price: %.2f)",
+		order.Id, side, symbol, limitPrice, currentPrice)
+	GlobalLimitOrderMatcher.AddOrder(order)
 
 	return order, nil
 }
