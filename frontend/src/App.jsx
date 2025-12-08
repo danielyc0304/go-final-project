@@ -165,9 +165,9 @@ export default function App() {
           const sortByClose = cpData.sort((a, b) => a.close - b.close);
           setLowestData(sortByClose[0].close);
           setHighestData(sortByClose[sortByClose.length -1].close);
-          console.log("最高價:", sortByClose[sortByClose.length -1].close);
-          console.log("最低價:", sortByClose[0].close);
-          console.log("歷史資料載入完成", sortByClose);
+          // console.log("最高價:", sortByClose[sortByClose.length -1].close);
+          // console.log("最低價:", sortByClose[0].close);
+          // console.log("歷史資料載入完成", sortByClose);
 
         }
       } catch (err) {
